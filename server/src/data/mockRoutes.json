@@ -1,0 +1,79 @@
+{
+  "ciudades": [
+    { "id": "santiago", "nombre": "Santiago", "latitud": -33.4489, "longitud": -70.6693 },
+    { "id": "rancagua", "nombre": "Rancagua", "latitud": -34.1701, "longitud": -70.7394 },
+    { "id": "san_fernando", "nombre": "San Fernando", "latitud": -34.5839, "longitud": -71.0003 },
+    { "id": "talca", "nombre": "Talca", "latitud": -35.4264, "longitud": -71.6554 },
+    { "id": "chillan", "nombre": "Chillán", "latitud": -36.6066, "longitud": -72.1034 },
+    { "id": "los_angeles", "nombre": "Los Ángeles", "latitud": -37.4693, "longitud": -72.3527 },
+    { "id": "temuco", "nombre": "Temuco", "latitud": -38.7359, "longitud": -72.5904 },
+    { "id": "valdivia", "nombre": "Valdivia", "latitud": -39.8142, "longitud": -73.2459 },
+    { "id": "puerto_montt", "nombre": "Puerto Montt", "latitud": -41.4693, "longitud": -72.9424 }
+  ],
+  "tramos": [
+    {
+      "id": "tramo_01",
+      "origenId": "santiago",
+      "destinoId": "rancagua",
+      "distancia_km": 87,
+      "tiempoBase_min": 55,
+      "descripcion": "Ruta 5 Sur – Santiago a Rancagua"
+    },
+    {
+      "id": "tramo_02",
+      "origenId": "rancagua",
+      "destinoId": "san_fernando",
+      "distancia_km": 93,
+      "tiempoBase_min": 62,
+      "descripcion": "Ruta 5 Sur – Rancagua a San Fernando"
+    },
+    {
+      "id": "tramo_03",
+      "origenId": "san_fernando",
+      "destinoId": "talca",
+      "distancia_km": 108,
+      "tiempoBase_min": 72,
+      "descripcion": "Ruta 5 Sur – San Fernando a Talca"
+    },
+    {
+      "id": "tramo_04",
+      "origenId": "talca",
+      "destinoId": "chillan",
+      "distancia_km": 133,
+      "tiempoBase_min": 88,
+      "descripcion": "Ruta 5 Sur – Talca a Chillán"
+    },
+    {
+      "id": "tramo_05",
+      "origenId": "chillan",
+      "destinoId": "los_angeles",
+      "distancia_km": 101,
+      "tiempoBase_min": 67,
+      "descripcion": "Ruta 5 Sur – Chillán a Los Ángeles"
+    },
+    {
+      "id": "tramo_06",
+      "origenId": "los_angeles",
+      "destinoId": "temuco",
+      "distancia_km": 147,
+      "tiempoBase_min": 98,
+      "descripcion": "Ruta 5 Sur – Los Ángeles a Temuco"
+    },
+    {
+      "id": "tramo_07",
+      "origenId": "temuco",
+      "destinoId": "valdivia",
+      "distancia_km": 163,
+      "tiempoBase_min": 108,
+      "descripcion": "Ruta 5 Sur – Temuco a Valdivia"
+    },
+    {
+      "id": "tramo_08",
+      "origenId": "valdivia",
+      "destinoId": "puerto_montt",
+      "distancia_km": 186,
+      "tiempoBase_min": 125,
+      "descripcion": "Ruta 5 Sur – Valdivia a Puerto Montt"
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+[
+  {
+    "id": "tesla_model3_lr",
+    "modelo": "Tesla Model 3 Long Range",
+    "marca": "Tesla",
+    "bateriaUtilizable_kWh": 75,
+    "consumoReferencia_kWhPor100km": 14.5,
+    "potenciaCargaMaxima_kW": 250,
+    "conectoresCompatibles": ["CCS2"],
+    "imagenUrl": "/assets/tesla_model3.png"
+  },
+  {
+    "id": "byd_dolphin",
+    "modelo": "BYD Dolphin",
+    "marca": "BYD",
+    "bateriaUtilizable_kWh": 44.9,
+    "consumoReferencia_kWhPor100km": 13.0,
+    "potenciaCargaMaxima_kW": 60,
+    "conectoresCompatibles": ["CCS2"],
+    "imagenUrl": "/assets/byd_dolphin.png"
+  },
+  {
+    "id": "hyundai_kona_ev",
+    "modelo": "Hyundai Kona Electric",
+    "marca": "Hyundai",
+    "bateriaUtilizable_kWh": 64,
+    "consumoReferencia_kWhPor100km": 14.7,
+    "potenciaCargaMaxima_kW": 77,
+    "conectoresCompatibles": ["CCS2"],
+    "imagenUrl": "/assets/hyundai_kona.png"
+  },
+  {
+    "id": "nissan_leaf_eplus",
+    "modelo": "Nissan Leaf e+",
+    "marca": "Nissan",
+    "bateriaUtilizable_kWh": 59,
+    "consumoReferencia_kWhPor100km": 17.1,
+    "potenciaCargaMaxima_kW": 50,
+    "conectoresCompatibles": ["CHAdeMO"],
+    "imagenUrl": "/assets/nissan_leaf.png"
+  },
+  {
+    "id": "mg_zs_ev",
+    "modelo": "MG ZS EV Long Range",
+    "marca": "MG",
+    "bateriaUtilizable_kWh": 50.3,
+    "consumoReferencia_kWhPor100km": 17.0,
+    "potenciaCargaMaxima_kW": 76,
+    "conectoresCompatibles": ["CCS2"],
+    "imagenUrl": "/assets/mg_zs.png"
+  }
+]
