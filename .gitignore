@@ -43,3 +43,6 @@ Thumbs.db
 # Vite & bundler cache
 .vite/
 .cache/
+
+# Mockups de exploracion visual
+mockups/
