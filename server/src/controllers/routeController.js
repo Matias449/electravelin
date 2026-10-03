@@ -218,7 +218,6 @@ function crearPlanRoute(routePlanner = createRoutePlanningService(), logger = nu
         logger?.warn('routing_provider_error', {
           requestId: req.requestId,
           proveedor: error.provider,
-          message: error.message,
         });
         return res.status(502).json({
           exito: false,

@@ -29,6 +29,14 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
+  useEffect(() => {
+    function handleSessionExpired() {
+      setUsuario(null);
+    }
+    window.addEventListener('electravelin:session-expired', handleSessionExpired);
+    return () => window.removeEventListener('electravelin:session-expired', handleSessionExpired);
+  }, []);
+
   const login = useCallback(async (email, password) => {
     const data = await api.login({ email, password });
     api.setToken(data.token);

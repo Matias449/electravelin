@@ -33,6 +33,8 @@ export default function CatalogPanel({ onRequireAuth }) {
         if (usuario) {
           const favoritosData = await api.fetchFavorites();
           if (active) setFavoritos(favoritosData);
+        } else {
+          setFavoritos([]);
         }
       } catch (err) {
         if (active) setError(err.message);

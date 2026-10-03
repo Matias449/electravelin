@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 const TABS = [
   { id: 'planificar', label: 'Planificar', icon: '🗺️' },
   { id: 'catalogo', label: 'Catálogo', icon: '🔌' },
-  { id: 'perfil', label: 'Mi perfil', icon: '👤', requiresAuth: true },
+  { id: 'perfil', label: 'Mi perfil', icon: '👤' },
   { id: 'admin', label: 'Administración', icon: '🛠️', requiresAdmin: true },
 ];
 

@@ -6,7 +6,7 @@ const {
   normalizeConnector,
   createSecConnectorService,
 } = require('../src/services/secConnectorService');
-const { createTestApp, withServer, request, registerUser, createAdminToken } = require('../test-utils/helpers');
+const { createTestApp, createTestStore, withServer, request, registerUser, createAdminToken } = require('../test-utils/helpers');
 
 test('normalización de conectores mapea variantes hacia nomenclaturas oficiales', () => {
   assert.equal(normalizeConnector('CCS 2'), 'CCS2');
@@ -138,6 +138,20 @@ test('RF10 & PR-014: ingesta atómica conserva datos previos si la importación 
   // Comprobar que los datos previos siguen intactos
   assert.equal(fakeStore.data.length, 1);
   assert.equal(fakeStore.data[0].id, 'sta_previa');
+});
+
+test('RF10: los metadatos de la última ingesta sobreviven al reinicio del servicio', () => {
+  const store = createTestStore();
+  const service = createSecConnectorService({ store });
+  service.ingestSecStations([
+    { nombre: 'Estación Persistente', operador: 'Test', ciudad: 'Talca', latitud: -35.42, longitud: -71.65, conectores: ['CCS2'], potencia: 100, tarifa: 250 },
+  ]);
+
+  const restarted = createSecConnectorService({ store });
+  const metadata = restarted.getMetadata();
+  assert.equal(metadata.validos, 1);
+  assert.equal(metadata.totalProcesados, 1);
+  assert.equal(metadata.descartados, 0);
 });
 
 test('Endpoints HTTP: consulta pública de fuente y sincronización admin de SEC', async () => {

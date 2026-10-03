@@ -18,9 +18,17 @@ export default function ProfilePanel({ onRequireAuth }) {
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
+    if (!usuario) {
+      setCargando(false);
+      setViajes([]);
+      setFavoritos([]);
+      setError('');
+      return undefined;
+    }
     let active = true;
     async function load() {
       setCargando(true);
+      setError('');
       try {
         const [vehiculosData, viajesData, favoritosData] = await Promise.all([
           api.fetchVehiculos(),
@@ -39,7 +47,7 @@ export default function ProfilePanel({ onRequireAuth }) {
     }
     load();
     return () => { active = false; };
-  }, []);
+  }, [usuario?.id]);
 
   useEffect(() => {
     setNombre(usuario?.nombre || '');

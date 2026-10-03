@@ -17,9 +17,12 @@ function createCatalogController({ catalogService, auditService, secConnectorSer
 
   function respondMutation(res, status, result, key, resultKey, successMessage) {
     if (result.error) {
+      const code = result.error.status === 404 ? 'NOT_FOUND'
+        : result.error.status === 409 ? 'DUPLICATE'
+          : 'VALIDATION_ERROR';
       return res.status(result.error.status).json({
         exito: false,
-        code: 'VALIDATION_ERROR',
+        code,
         error: result.error.mensaje,
         detalles: result.error.detalles,
       });
@@ -29,11 +32,13 @@ function createCatalogController({ catalogService, auditService, secConnectorSer
 
   return {
     listVehicles(req, res) {
-      return res.json({ exito: true, vehiculos: catalogService.listVehicles(req.query) });
+      const { marca, conector, bateriaMin, potenciaMin } = req.query;
+      return res.json({ exito: true, vehiculos: catalogService.listVehicles({ marca, conector, bateriaMin, potenciaMin }) });
     },
 
     listStations(req, res) {
-      return res.json({ exito: true, estaciones: catalogService.listStations(req.query) });
+      const { ciudad, region, operador, conector, potenciaMin } = req.query;
+      return res.json({ exito: true, estaciones: catalogService.listStations({ ciudad, region, operador, conector, potenciaMin }) });
     },
 
     adminListVehicles(req, res) {

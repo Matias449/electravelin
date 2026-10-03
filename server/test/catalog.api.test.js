@@ -134,3 +134,53 @@ test('un usuario común no puede mutar el catálogo', async () => {
     assert.equal(response.status, 403);
   });
 });
+
+test('los flags internos del query público no permiten ver registros desactivados', async () => {
+  const { app, store } = createTestApp();
+  const adminToken = createAdminToken(store);
+  await withServer(app, async (baseUrl) => {
+    const deactivated = await request(baseUrl, '/api/admin/vehiculos/tesla_model3_lr', { method: 'DELETE', token: adminToken });
+    assert.equal(deactivated.status, 200);
+
+    for (const query of ['', '?incluirInactivos=false', '?incluirInactivos=true', '?incluirInactivos=1']) {
+      const list = await request(baseUrl, `/api/vehiculos${query}`);
+      assert.ok(!list.body.vehiculos.some((vehicle) => vehicle.id === 'tesla_model3_lr'), `no debe listar inactivos con "${query}"`);
+    }
+
+    const adminList = await request(baseUrl, '/api/admin/vehiculos', { token: adminToken });
+    assert.ok(adminList.body.vehiculos.some((vehicle) => vehicle.id === 'tesla_model3_lr'));
+  });
+});
+
+test('una actualización con campos obligatorios nulos responde 400 y no rompe el catálogo', async () => {
+  const { app, store } = createTestApp();
+  const adminToken = createAdminToken(store);
+  await withServer(app, async (baseUrl) => {
+    const invalid = await request(baseUrl, '/api/admin/vehiculos/tesla_model3_lr', {
+      method: 'PUT',
+      token: adminToken,
+      body: { marca: null },
+    });
+    assert.equal(invalid.status, 400);
+
+    const list = await request(baseUrl, '/api/vehiculos');
+    assert.equal(list.status, 200);
+    assert.ok(list.body.vehiculos.length >= 15);
+  });
+});
+
+test('un id duplicado responde 409 con código DUPLICATE', async () => {
+  const { app, store } = createTestApp();
+  const adminToken = createAdminToken(store);
+  await withServer(app, async (baseUrl) => {
+    const payload = {
+      id: 'duplicado_test', modelo: 'Duplicado', marca: 'Test', bateriaUtilizable_kWh: 50,
+      consumoReferencia_kWhPor100km: 15, potenciaCargaMaxima_kW: 100, conectoresCompatibles: ['CCS2'],
+    };
+    const first = await request(baseUrl, '/api/admin/vehiculos', { method: 'POST', token: adminToken, body: payload });
+    assert.equal(first.status, 201);
+    const second = await request(baseUrl, '/api/admin/vehiculos', { method: 'POST', token: adminToken, body: payload });
+    assert.equal(second.status, 409);
+    assert.equal(second.body.code, 'DUPLICATE');
+  });
+});

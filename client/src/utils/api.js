@@ -39,6 +39,10 @@ async function request(path, { method = 'GET', body, auth = false } = {}) {
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
+    if (res.status === 401 && auth) {
+      setToken(null);
+      window.dispatchEvent(new Event('electravelin:session-expired'));
+    }
     throw new ApiError(data.error || 'Error al procesar la solicitud', {
       status: res.status,
       code: data.code,

@@ -1,5 +1,4 @@
 const CONECTORES_VALIDOS = ['CCS2', 'CHAdeMO', 'Type 2'];
-const ROLES_VALIDOS = ['usuario', 'admin'];
 
 function normaliseText(value) {
   return String(value ?? '').trim().toLowerCase();
@@ -46,6 +45,11 @@ function validateVehicleInput(body, { partial = false } = {}) {
       errors.push(`Conectores válidos: ${CONECTORES_VALIDOS.join(', ')}.`);
     }
   }
+  for (const field of ['modelo', 'marca']) {
+    if (body[field] !== undefined && (typeof body[field] !== 'string' || body[field].trim() === '')) {
+      errors.push(`El campo "${field}" no puede estar vacío.`);
+    }
+  }
   if (body.activo !== undefined && typeof body.activo !== 'boolean') {
     errors.push('El campo "activo" debe ser booleano.');
   }
@@ -77,6 +81,11 @@ function validateStationInput(body, { partial = false } = {}) {
       errors.push(`Conectores válidos: ${CONECTORES_VALIDOS.join(', ')}.`);
     }
   }
+  for (const field of ['nombre', 'ciudad', 'operador']) {
+    if (body[field] !== undefined && (typeof body[field] !== 'string' || body[field].trim() === '')) {
+      errors.push(`El campo "${field}" no puede estar vacío.`);
+    }
+  }
   if (body.disponible !== undefined && typeof body.disponible !== 'boolean') {
     errors.push('El campo "disponible" debe ser booleano.');
   }
@@ -94,28 +103,28 @@ function createCatalogService({ store } = {}) {
   if (!store) throw new Error('createCatalogService requiere un store.');
 
   function listVehicles(filters = {}) {
-    const { marca, conector, bateriaMin, potenciaMin, incluirInactivos = false } = filters;
+    const { marca, conector, bateriaMin, potenciaMin, incluirInactivos } = filters;
     return store
       .all('vehicles')
-      .filter((vehicle) => incluirInactivos || vehicle.activo !== false)
+      .filter((vehicle) => incluirInactivos === true || vehicle.activo !== false)
       .filter((vehicle) => !marca || normaliseText(vehicle.marca).includes(normaliseText(marca)))
       .filter((vehicle) => !conector || vehicle.conectoresCompatibles?.includes(conector))
       .filter((vehicle) => !bateriaMin || Number(vehicle.bateriaUtilizable_kWh) >= Number(bateriaMin))
       .filter((vehicle) => !potenciaMin || Number(vehicle.potenciaCargaMaxima_kW) >= Number(potenciaMin))
-      .sort((a, b) => a.marca.localeCompare(b.marca, 'es-CL') || a.modelo.localeCompare(b.modelo, 'es-CL'));
+      .sort((a, b) => String(a.marca ?? '').localeCompare(String(b.marca ?? ''), 'es-CL') || String(a.modelo ?? '').localeCompare(String(b.modelo ?? ''), 'es-CL'));
   }
 
   function listStations(filters = {}) {
-    const { ciudad, operador, conector, potenciaMin, region, incluirNoDisponibles = false } = filters;
+    const { ciudad, operador, conector, potenciaMin, region, incluirNoDisponibles } = filters;
     return store
       .all('stations')
-      .filter((station) => incluirNoDisponibles || station.disponible !== false)
+      .filter((station) => incluirNoDisponibles === true || station.disponible !== false)
       .filter((station) => !ciudad || normaliseText(station.ciudad).includes(normaliseText(ciudad)))
       .filter((station) => !region || normaliseText(station.region).includes(normaliseText(region)))
       .filter((station) => !operador || normaliseText(station.operador).includes(normaliseText(operador)))
       .filter((station) => !conector || station.conectoresDisponibles?.includes(conector))
       .filter((station) => !potenciaMin || Number(station.potenciaMaxima_kW) >= Number(potenciaMin))
-      .sort((a, b) => a.ciudad.localeCompare(b.ciudad, 'es-CL') || a.nombre.localeCompare(b.nombre, 'es-CL'));
+      .sort((a, b) => String(a.ciudad ?? '').localeCompare(String(b.ciudad ?? ''), 'es-CL') || String(a.nombre ?? '').localeCompare(String(b.nombre ?? ''), 'es-CL'));
   }
 
   function createVehicle(body) {
@@ -215,7 +224,6 @@ function createCatalogService({ store } = {}) {
 
   return {
     CONECTORES_VALIDOS,
-    ROLES_VALIDOS,
     listVehicles,
     listStations,
     createVehicle,
@@ -227,4 +235,4 @@ function createCatalogService({ store } = {}) {
   };
 }
 
-module.exports = { createCatalogService, CONECTORES_VALIDOS, ROLES_VALIDOS };
+module.exports = { createCatalogService, CONECTORES_VALIDOS };

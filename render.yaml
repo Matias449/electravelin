@@ -18,8 +18,12 @@ services:
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
+      - key: CLIENT_ORIGIN
+        sync: false
       - key: LOG_LEVEL
         value: info
+      # Nota: el plan free usa disco efímero; para persistir usuarios, viajes y
+      # favoritos usa Supabase (supabase/migrations) o un disco en plan pagado.
 
   - type: web
     name: electravelin-web

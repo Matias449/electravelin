@@ -12,10 +12,10 @@ function createAccountController({ authService, accountService, catalogService, 
   }
 
   return {
-    register(req, res) {
+    async register(req, res) {
       try {
         const { nombre, email, password } = req.body || {};
-        const result = authService.register({ nombre, email, password, rol: 'usuario' });
+        const result = await authService.register({ nombre, email, password });
         auditService?.record({
           actorId: result.usuario.id,
           actorEmail: result.usuario.email,
@@ -30,10 +30,10 @@ function createAccountController({ authService, accountService, catalogService, 
       }
     },
 
-    login(req, res) {
+    async login(req, res) {
       try {
         const { email, password } = req.body || {};
-        const result = authService.login({ email, password });
+        const result = await authService.login({ email, password });
         auditService?.record({
           actorId: result.usuario.id,
           actorEmail: result.usuario.email,

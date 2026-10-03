@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import StopCard from './StopCard';
 import RouteMap from './RouteMap';
 import { useAuth } from '../context/AuthContext';
@@ -20,6 +20,12 @@ export default function RouteResults({ resultado, consulta, onRequireAuth }) {
   const [guardando, setGuardando] = useState(false);
   const [guardado, setGuardado] = useState(false);
   const [errorGuardar, setErrorGuardar] = useState('');
+
+  useEffect(() => {
+    setGuardando(false);
+    setGuardado(false);
+    setErrorGuardar('');
+  }, [resultado]);
 
   if (!resultado) return null;
 

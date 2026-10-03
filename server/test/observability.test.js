@@ -64,6 +64,33 @@ test('el logger escribe JSON estructurado y respeta el nivel', () => {
   assert.equal(second.level, 'error');
 });
 
+test('el login responde 429 al exceder el límite de intentos', async () => {
+  const { app } = createTestApp({ rateLimits: { auth: { max: 3, windowMs: 60_000 } } });
+  await withServer(app, async (baseUrl) => {
+    const statuses = [];
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const response = await request(baseUrl, '/api/auth/login', {
+        method: 'POST',
+        body: { email: 'nadie@test.cl', password: 'clave-invalida-123' },
+      });
+      statuses.push(response.status);
+    }
+    assert.deepEqual(statuses.slice(0, 3), [401, 401, 401]);
+    assert.equal(statuses[3], 429);
+    assert.equal(statuses[4], 429);
+  });
+});
+
+test('rechaza tokens con algoritmo distinto de HS256', async () => {
+  const { app } = createTestApp();
+  await withServer(app, async (baseUrl) => {
+    const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url');
+    const payload = Buffer.from(JSON.stringify({ sub: 'x', exp: Math.floor(Date.now() / 1000) + 60 })).toString('base64url');
+    const response = await request(baseUrl, '/api/auth/me', { token: `${header}.${payload}.` });
+    assert.equal(response.status, 401);
+  });
+});
+
 test('una falla del proveedor queda registrada en el log con request ID sin filtrarla al cliente', async () => {
   const lines = [];
   const logger = createLogger({ level: 'debug', stream: { write: (line) => lines.push(line) } });

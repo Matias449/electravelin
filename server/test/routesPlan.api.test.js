@@ -1,10 +1,11 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { createApp } = require('../src/index');
+const { createTestApp } = require('../test-utils/helpers');
 const { RoutingProviderError } = require('../src/services/routingProviders');
 
 async function withServer(routePlanner, callback) {
-  const server = createApp({ routePlanner }).listen(0);
+  const { app } = createTestApp({ routePlanner });
+  const server = app.listen(0);
   await new Promise((resolve) => server.once('listening', resolve));
   const { port } = server.address();
   try {

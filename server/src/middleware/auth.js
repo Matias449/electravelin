@@ -51,16 +51,7 @@ function createAuthMiddleware({ authService }) {
     });
   }
 
-  function optionalAuth(req, res, next) {
-    try {
-      attachUser(req);
-    } catch {
-      req.user = undefined;
-    }
-    return next();
-  }
-
-  return { requireAuth, requireAdmin, optionalAuth };
+  return { requireAuth, requireAdmin };
 }
 
 module.exports = { createAuthMiddleware };

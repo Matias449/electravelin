@@ -285,7 +285,7 @@ La aplicación web estará disponible en `http://localhost:5173` (o `http://loca
 ### 4. Pruebas
 ```bash
 cd server
-npm test        # 30 pruebas de servicios y API con node:test
+npm test        # 43 pruebas de servicios y API con node:test
 ```
 
 ---
@@ -318,6 +318,16 @@ health check en `/api/ready`) y el cliente estático con rewrite `/api/*` hacia 
 API. En Vercel puedes publicar solo el cliente con `client/vercel.json`,
 reemplazando la URL de destino por la de tu API.
 
+> **Persistencia en producción:** el plan gratuito de Render usa disco efímero,
+> por lo que el almacén JSON se reinicia en cada despliegue. Para datos
+> duraderos usa Supabase (migraciones en `supabase/`) o un disco persistente en
+> un plan pagado; el adaptador de Supabase para el backend queda como paso
+> siguiente del roadmap.
+
+El API aplica límites de tasa en memoria por IP (30 solicitudes/5 min en
+`/api/auth/*`, 60/5 min en `/api/routes/plan`) y límites de tamaño de cuerpo
+(16 KB en auth, 5 MB general). Con réplicas se requiere un store compartido.
+
 Variables de entorno del backend documentadas en `server/.env.example`:
 
 | Variable | Uso |
@@ -325,6 +335,7 @@ Variables de entorno del backend documentadas en `server/.env.example`:
 | `PORT` | Puerto del API (por defecto 3001) |
 | `JWT_SECRET` | Firma de tokens; obligatorio en producción |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Bootstrap opcional del administrador |
+| `CLIENT_ORIGIN` | Orígenes permitidos por CORS (separados por coma); vacío = cualquiera |
 | `DATA_FILE` | Ruta del almacén JSON local |
 | `LOG_LEVEL` | `debug`, `info`, `warn` o `error` |
 | `ORS_API_KEY` | Clave privada de OpenRouteService (solo backend) |
@@ -375,7 +386,7 @@ Esta versión corresponde al **MVP v2**. Para llevar la aplicación a un nivel d
 - **Backend:** Node.js 18+, Express, CORS, arquitectura por capas (controladores, servicios, rutas, middleware), JWT HS256 y hash scrypt sin dependencias externas, logging JSON estructurado con request IDs.
 - **Datos:** almacén JSON local inyectable para desarrollo; migraciones y seed de Supabase (PostgreSQL + RLS) para producción.
 - **Algoritmos:** Cálculo de consumo energético determinista, reserva crítica de batería, proyección de estaciones sobre el trazado y priorización de potencia efectiva.
-- **Pruebas:** `node:test` para servicios y contrato HTTP (30 casos).
+- **Pruebas:** `node:test` para servicios y contrato HTTP (43 casos).
 
 ---
 

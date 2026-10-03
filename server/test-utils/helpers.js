@@ -1,6 +1,6 @@
 const { createStore } = require('../src/services/dataStore');
 const { createApp } = require('../src/index');
-const { createAuthService } = require('../src/services/authService');
+const { createAuthService, signToken } = require('../src/services/authService');
 const seedVehicles = require('../src/data/vehicles.json');
 const seedStations = require('../src/data/stations.json');
 const { createLogger } = require('../src/services/logger');
@@ -22,19 +22,19 @@ function createTestApp(options = {}) {
     jwtSecret: TEST_JWT_SECRET,
     logger: options.logger || silentLogger(),
     routePlanner: options.routePlanner,
+    rateLimits: options.rateLimits,
   });
   return { app, store };
 }
 
 function createAdminToken(store) {
   const authService = createAuthService({ store, jwtSecret: TEST_JWT_SECRET });
-  const { token } = authService.register({
+  const admin = authService.bootstrapAdmin({
     nombre: 'Admin Test',
     email: `admin_${Date.now()}_${Math.random().toString(16).slice(2)}@test.cl`,
     password: 'admin-segura-123',
-    rol: 'admin',
   });
-  return token;
+  return signToken({ sub: admin.id, rol: admin.rol }, TEST_JWT_SECRET);
 }
 
 async function withServer(app, callback) {

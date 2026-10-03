@@ -204,7 +204,8 @@ function processSecStations(rawList) {
  * Si la nueva carga falla o produce 0 estaciones válidas, el conjunto anterior no se pierde.
  */
 function createSecConnectorService({ store, logger } = {}) {
-  let latestMetadata = {
+  const SEC_METADATA_ID = 'sec_metadata';
+  const defaultMetadata = {
     fuente: 'SEC / EcoCarga (Chile)',
     fechaActualizacion: new Date().toISOString(),
     totalProcesados: 17,
@@ -213,8 +214,16 @@ function createSecConnectorService({ store, logger } = {}) {
     duplicadosFusionados: 0,
   };
 
+  let latestMetadata = (store && typeof store.findById === 'function' && store.findById('meta', SEC_METADATA_ID)) || defaultMetadata;
+
   function getMetadata() {
     return latestMetadata;
+  }
+
+  function persistMetadata(metadata) {
+    if (!store || typeof store.insert !== 'function' || typeof store.update !== 'function') return;
+    if (store.findById('meta', SEC_METADATA_ID)) store.update('meta', SEC_METADATA_ID, metadata);
+    else store.insert('meta', { id: SEC_METADATA_ID, ...metadata });
   }
 
   /**
@@ -239,6 +248,7 @@ function createSecConnectorService({ store, logger } = {}) {
     }
 
     latestMetadata = result.metadata;
+    persistMetadata(result.metadata);
     logger?.info('sec_stations_ingested', latestMetadata);
     return result;
   }

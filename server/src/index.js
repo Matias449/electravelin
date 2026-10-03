@@ -17,6 +17,7 @@ const { createCatalogService } = require('./services/catalogService');
 const { createAccountService } = require('./services/accountService');
 const { createAuthMiddleware } = require('./middleware/auth');
 const { createRequestContext } = require('./middleware/requestContext');
+const { createRateLimiter } = require('./middleware/rateLimit');
 const { createRoutePlanningService } = require('./services/routePlanningService');
 const { createSecConnectorService } = require('./services/secConnectorService');
 const { loadEnvironment } = require('./config/loadEnvironment');
@@ -36,6 +37,12 @@ function resolveJwtSecret(logger) {
   return crypto.randomBytes(32).toString('hex');
 }
 
+function resolveCorsOrigin() {
+  const configured = process.env.CLIENT_ORIGIN;
+  if (!configured) return true;
+  return configured.split(',').map((origin) => origin.trim()).filter(Boolean);
+}
+
 function ensureBootstrapAdmin(store, authService, logger) {
   const email = process.env.ADMIN_EMAIL;
   const password = process.env.ADMIN_PASSWORD;
@@ -43,14 +50,14 @@ function ensureBootstrapAdmin(store, authService, logger) {
   const existing = store.find('users', (user) => user.email === String(email).trim().toLowerCase());
   if (existing) return;
   try {
-    authService.register({ nombre: 'Administrador', email, password, rol: 'admin' });
+    authService.bootstrapAdmin({ email, password });
     logger.info('admin_bootstrap_creado', { email });
   } catch (error) {
     logger.error('admin_bootstrap_fallido', { message: error.message });
   }
 }
 
-function createApp({ routePlanner, store, jwtSecret, logger } = {}) {
+function createApp({ routePlanner, store, jwtSecret, logger, rateLimits } = {}) {
   const log = logger || createLogger();
   const dataStore = store || createStore({
     filePath: process.env.DATA_FILE || path.resolve(__dirname, '../data/electravelin.json'),
@@ -75,13 +82,20 @@ function createApp({ routePlanner, store, jwtSecret, logger } = {}) {
     stations: catalogService.listStations(),
   }));
 
+  const authLimiter = createRateLimiter({ name: 'auth', windowMs: 5 * 60 * 1000, max: 30, ...rateLimits?.auth });
+  const plannerLimiter = createRateLimiter({ name: 'plan', windowMs: 5 * 60 * 1000, max: 60, ...rateLimits?.planner });
+
   const app = express();
   app.disable('x-powered-by');
-  app.use(cors());
-  app.use(express.json({ limit: '5mb' }));
+  if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
+  app.use(cors({ origin: resolveCorsOrigin() }));
   app.use(createRequestContext({ logger: log }));
 
-  app.use('/api/auth', createAuthRoutes({ accountController, authMiddleware }));
+  // Autenticación: cuerpo pequeño y límite de intentos por IP.
+  app.use('/api/auth', express.json({ limit: '16kb' }), authLimiter, createAuthRoutes({ accountController, authMiddleware }));
+
+  app.use(express.json({ limit: '5mb' }));
+  app.use('/api/routes/plan', plannerLimiter);
   app.use('/api', createAccountRoutes({ accountController, authMiddleware }));
   app.use('/api/admin', createAdminRoutes({ catalogController, authMiddleware }));
   app.use('/api', createRouteRoutes({ routePlanner: planner, catalogController, cityController, logger: log }));
@@ -102,8 +116,7 @@ function createApp({ routePlanner, store, jwtSecret, logger } = {}) {
       dataStore.all('vehicles');
       const checks = {
         almacen: 'ok',
-        ruteoConfigurado: Boolean(process.env.ORS_API_KEY || process.env.OSRM_BASE_URL || process.env.ROUTING_PROVIDER !== 'openrouteservice'),
-        proveedorRuteo: process.env.ROUTING_PROVIDER || (process.env.ORS_API_KEY ? 'openrouteservice' : 'osrm'),
+        ruteoConfigurado: Boolean(process.env.ORS_API_KEY),
       };
       return res.status(200).json({ status: 'ready', checks, requestId: req.requestId });
     } catch (error) {
@@ -117,6 +130,9 @@ function createApp({ routePlanner, store, jwtSecret, logger } = {}) {
   app.use((err, req, res, next) => {
     if (err.type === 'entity.parse.failed') {
       return res.status(400).json({ exito: false, code: 'INVALID_JSON', error: 'El cuerpo de la solicitud no es JSON válido.' });
+    }
+    if (err.type === 'entity.too.large') {
+      return res.status(413).json({ exito: false, code: 'PAYLOAD_TOO_LARGE', error: 'El cuerpo de la solicitud es demasiado grande.' });
     }
     log.error('unhandled_error', {
       requestId: req.requestId,

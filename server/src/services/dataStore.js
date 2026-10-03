@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
-const COLLECTIONS = ['users', 'vehicles', 'stations', 'trips', 'favorites', 'audit'];
+const COLLECTIONS = ['users', 'vehicles', 'stations', 'trips', 'favorites', 'audit', 'meta'];
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -38,7 +38,7 @@ function createStore({ filePath = null, seed = {} } = {}) {
   function persist() {
     if (!filePath) return;
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
-    const temporary = `${filePath}.${process.pid}.tmp`;
+    const temporary = `${filePath}.${process.pid}.${crypto.randomUUID()}.tmp`;
     fs.writeFileSync(temporary, JSON.stringify(data, null, 2), 'utf8');
     fs.renameSync(temporary, filePath);
   }

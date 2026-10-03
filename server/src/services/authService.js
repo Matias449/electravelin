@@ -1,8 +1,12 @@
 const crypto = require('crypto');
+const { promisify } = require('util');
+
+const scrypt = promisify(crypto.scrypt);
 
 const TOKEN_TTL_SECONDS = 60 * 60 * 24 * 7;
 const PASSWORD_KEY_LENGTH = 64;
 const SALT_BYTES = 16;
+const PASSWORD_MIN_LENGTH = 8;
 
 class AuthError extends Error {
   constructor(message, code = 'AUTH_ERROR', status = 401) {
@@ -30,6 +34,16 @@ function verifyToken(token, secret) {
   if (parts.length !== 3) throw new AuthError('Token malformado.', 'INVALID_TOKEN');
 
   const [header, body, signature] = parts;
+  let parsedHeader;
+  try {
+    parsedHeader = JSON.parse(Buffer.from(header, 'base64url').toString('utf8'));
+  } catch {
+    throw new AuthError('Token malformado.', 'INVALID_TOKEN');
+  }
+  if (parsedHeader.alg !== 'HS256' || parsedHeader.typ !== 'JWT') {
+    throw new AuthError('Algoritmo de token no soportado.', 'INVALID_TOKEN');
+  }
+
   const expected = crypto.createHmac('sha256', secret).update(`${header}.${body}`).digest('base64url');
   const receivedBuffer = Buffer.from(signature);
   const expectedBuffer = Buffer.from(expected);
@@ -50,13 +64,12 @@ function verifyToken(token, secret) {
   return payload;
 }
 
-function hashPassword(password) {
-  const salt = crypto.randomBytes(SALT_BYTES).toString('hex');
+function hashPasswordSync(password, salt = crypto.randomBytes(SALT_BYTES).toString('hex')) {
   const derived = crypto.scryptSync(password, salt, PASSWORD_KEY_LENGTH).toString('hex');
   return `scrypt$${salt}$${derived}`;
 }
 
-function verifyPassword(password, stored) {
+function verifyPasswordSync(password, stored) {
   const [scheme, salt, hash] = String(stored || '').split('$');
   if (scheme !== 'scrypt' || !salt || !hash) return false;
   const derived = crypto.scryptSync(password, salt, PASSWORD_KEY_LENGTH);
@@ -64,12 +77,32 @@ function verifyPassword(password, stored) {
   return derived.length === expected.length && crypto.timingSafeEqual(derived, expected);
 }
 
+async function hashPassword(password) {
+  const salt = crypto.randomBytes(SALT_BYTES).toString('hex');
+  const derived = await scrypt(password, salt, PASSWORD_KEY_LENGTH);
+  return `scrypt$${salt}$${derived.toString('hex')}`;
+}
+
+async function verifyPassword(password, stored) {
+  const [scheme, salt, hash] = String(stored || '').split('$');
+  if (scheme !== 'scrypt' || !salt || !hash) return false;
+  const derived = await scrypt(password, salt, PASSWORD_KEY_LENGTH);
+  const expected = Buffer.from(hash, 'hex');
+  return derived.length === expected.length && crypto.timingSafeEqual(derived, expected);
+}
+
+let dummyHash = null;
+function getDummyHash() {
+  if (!dummyHash) dummyHash = hashPasswordSync('contraseña-inexistente-para-timing');
+  return dummyHash;
+}
+
 function validateEmail(email) {
   return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
 function validatePassword(password) {
-  return typeof password === 'string' && password.length >= 8;
+  return typeof password === 'string' && password.length >= PASSWORD_MIN_LENGTH;
 }
 
 function publicUser(user) {
@@ -77,9 +110,20 @@ function publicUser(user) {
   return rest;
 }
 
+function createUserRecord(store, { nombre, email, passwordHash, rol }) {
+  return store.insert('users', {
+    nombre: nombre.trim(),
+    email: String(email).trim().toLowerCase(),
+    passwordHash,
+    rol,
+    vehiculoFavoritoId: null,
+  });
+}
+
 /**
  * Servicio de cuentas: registro, login y emisión/verificación de JWT.
- * Los usuarios se persisten en el store inyectado.
+ * El hash scrypt es asíncrono para no bloquear el event loop; el bootstrap
+ * del administrador usa la variante síncrona porque corre una sola vez.
  */
 function createAuthService({ store, jwtSecret, tokenTtlSeconds = TOKEN_TTL_SECONDS } = {}) {
   if (!store) throw new Error('createAuthService requiere un store.');
@@ -90,7 +134,7 @@ function createAuthService({ store, jwtSecret, tokenTtlSeconds = TOKEN_TTL_SECON
     return store.find('users', (user) => user.email === normalised);
   }
 
-  function register({ nombre, email, password, rol = 'usuario' }) {
+  function validateRegistration({ nombre, email, password }) {
     if (!nombre || typeof nombre !== 'string' || nombre.trim().length < 2) {
       throw new AuthError('El nombre debe tener al menos 2 caracteres.', 'VALIDATION_ERROR', 400);
     }
@@ -98,26 +142,31 @@ function createAuthService({ store, jwtSecret, tokenTtlSeconds = TOKEN_TTL_SECON
       throw new AuthError('El correo electrónico no es válido.', 'VALIDATION_ERROR', 400);
     }
     if (!validatePassword(password)) {
-      throw new AuthError('La contraseña debe tener al menos 8 caracteres.', 'VALIDATION_ERROR', 400);
+      throw new AuthError(`La contraseña debe tener al menos ${PASSWORD_MIN_LENGTH} caracteres.`, 'VALIDATION_ERROR', 400);
     }
     if (findByEmail(email)) {
       throw new AuthError('Ya existe una cuenta con ese correo.', 'EMAIL_TAKEN', 409);
     }
+  }
 
-    const user = store.insert('users', {
-      nombre: nombre.trim(),
-      email: String(email).trim().toLowerCase(),
-      passwordHash: hashPassword(password),
-      rol,
-      vehiculoFavoritoId: null,
+  async function register({ nombre, email, password }) {
+    validateRegistration({ nombre, email, password });
+    const user = createUserRecord(store, {
+      nombre,
+      email,
+      passwordHash: await hashPassword(password),
+      rol: 'usuario',
     });
-
     return { usuario: publicUser(user), token: signToken({ sub: user.id, rol: user.rol }, jwtSecret, tokenTtlSeconds) };
   }
 
-  function login({ email, password }) {
+  async function login({ email, password }) {
     const user = findByEmail(email);
-    if (!user || !verifyPassword(password, user.passwordHash)) {
+    if (!user) {
+      await verifyPassword(password, getDummyHash());
+      throw new AuthError('Correo o contraseña incorrectos.', 'INVALID_CREDENTIALS', 401);
+    }
+    if (!(await verifyPassword(password, user.passwordHash))) {
       throw new AuthError('Correo o contraseña incorrectos.', 'INVALID_CREDENTIALS', 401);
     }
     return { usuario: publicUser(user), token: signToken({ sub: user.id, rol: user.rol }, jwtSecret, tokenTtlSeconds) };
@@ -146,7 +195,14 @@ function createAuthService({ store, jwtSecret, tokenTtlSeconds = TOKEN_TTL_SECON
     return publicUser(updated);
   }
 
-  return { register, login, authenticate, updateProfile, publicUser };
+  /** Crea el administrador inicial. Solo para bootstrap controlado por entorno. */
+  function bootstrapAdmin({ nombre = 'Administrador', email, password }) {
+    validateRegistration({ nombre, email, password });
+    const user = createUserRecord(store, { nombre, email, passwordHash: hashPasswordSync(password), rol: 'admin' });
+    return publicUser(user);
+  }
+
+  return { register, login, authenticate, updateProfile, bootstrapAdmin, publicUser };
 }
 
 module.exports = {
@@ -156,5 +212,7 @@ module.exports = {
   verifyToken,
   hashPassword,
   verifyPassword,
+  hashPasswordSync,
+  verifyPasswordSync,
   TOKEN_TTL_SECONDS,
 };

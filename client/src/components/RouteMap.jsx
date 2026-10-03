@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 function markerHtml(kind, label) {
   const icon = kind === 'stop' ? '⚡' : kind === 'origin' ? 'A' : 'B';
@@ -17,57 +19,39 @@ export default function RouteMap({ geometry, origen, destino, paradas = [] }) {
   const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
-    let map = null;
-    let timer = null;
-
-    function initMap() {
-      const L = window.L;
-      if (!L) return false;
-      if (!elementRef.current || !geometry?.coordinates?.length) return true;
-
-      setLoadError(false);
-      map = L.map(elementRef.current, { scrollWheelZoom: false, attributionControl: true });
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors',
-      }).addTo(map);
-
-      const route = L.geoJSON(geometry, {
-        style: { color: '#00d4ff', weight: 5, opacity: 0.9 },
-      }).addTo(map);
-      const icon = (kind, label) => L.divIcon({
-        className: 'route-map-icon-wrapper',
-        html: markerHtml(kind, label),
-        iconSize: [32, 32],
-        iconAnchor: [16, 16],
-      });
-
-      if (origen) L.marker([origen.latitud, origen.longitud], { icon: icon('origin', origen.nombre) }).bindPopup(`<strong>Origen</strong><br>${escapeHtml(origen.nombre)}`).addTo(map);
-      if (destino) L.marker([destino.latitud, destino.longitud], { icon: icon('destination', destino.nombre) }).bindPopup(`<strong>Destino</strong><br>${escapeHtml(destino.nombre)}`).addTo(map);
-      paradas.forEach((parada) => {
-        L.marker([parada.latitud, parada.longitud], { icon: icon('stop', parada.estacionNombre) })
-          .bindPopup(`<strong>${escapeHtml(parada.estacionNombre)}</strong><br>${escapeHtml(parada.ciudad)} · ${parada.socLlegada}% → ${parada.socSalida}%`)
-          .addTo(map);
-      });
-
-      map.fitBounds(route.getBounds(), { padding: [30, 30], maxZoom: 10 });
-      return true;
+    if (!elementRef.current || !geometry?.coordinates?.length) {
+      setLoadError(true);
+      return undefined;
     }
 
-    if (!initMap()) {
-      let attempts = 0;
-      timer = setInterval(() => {
-        attempts += 1;
-        if (initMap() || attempts > 20) {
-          clearInterval(timer);
-          if (!window.L) setLoadError(true);
-        }
-      }, 100);
-    }
+    setLoadError(false);
+    const map = L.map(elementRef.current, { scrollWheelZoom: false, attributionControl: true });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors',
+    }).addTo(map);
 
+    const route = L.geoJSON(geometry, {
+      style: { color: '#00d4ff', weight: 5, opacity: 0.9 },
+    }).addTo(map);
+    const icon = (kind, label) => L.divIcon({
+      className: 'route-map-icon-wrapper',
+      html: markerHtml(kind, label),
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
+    });
+
+    if (origen) L.marker([origen.latitud, origen.longitud], { icon: icon('origin', origen.nombre) }).bindPopup(`<strong>Origen</strong><br>${escapeHtml(origen.nombre)}`).addTo(map);
+    if (destino) L.marker([destino.latitud, destino.longitud], { icon: icon('destination', destino.nombre) }).bindPopup(`<strong>Destino</strong><br>${escapeHtml(destino.nombre)}`).addTo(map);
+    paradas.forEach((parada) => {
+      L.marker([parada.latitud, parada.longitud], { icon: icon('stop', parada.estacionNombre) })
+        .bindPopup(`<strong>${escapeHtml(parada.estacionNombre)}</strong><br>${escapeHtml(parada.ciudad)} · ${parada.socLlegada}% → ${parada.socSalida}%`)
+        .addTo(map);
+    });
+
+    map.fitBounds(route.getBounds(), { padding: [30, 30], maxZoom: 10 });
     return () => {
-      if (timer) clearInterval(timer);
-      if (map) map.remove();
+      map.remove();
     };
   }, [geometry, origen, destino, paradas]);
 
