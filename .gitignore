@@ -5,6 +5,8 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+*.log
+*.err.log
 
 # Build outputs
 dist/
@@ -17,6 +19,9 @@ build/
 .env.test.local
 .env.production.local
 .env.local
+
+# Datos locales de desarrollo (usuarios, viajes, favoritos, auditoría)
+server/data/
 
 # Editor & OS files
 .DS_Store

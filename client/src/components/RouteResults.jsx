@@ -1,29 +1,39 @@
-import React from 'react';
+import React, { useState } from 'react';
 import StopCard from './StopCard';
-import MapPlaceholder from './MapPlaceholder';
+import RouteMap from './RouteMap';
+import { useAuth } from '../context/AuthContext';
+import { saveTrip } from '../utils/api';
 
 /**
  * RouteResults — Visualización completa de los resultados del cálculo de ruta.
  *
  * Muestra:
- *  - Mapa placeholder (RF16)
+ *  - Mapa Leaflet con trazado, marcadores y zoom automático (RF16)
  *  - Resumen global: distancia, tiempo conducción, tiempo carga, costo total (RF18)
  *  - Timeline de paradas de recarga (RF17)
  *  - Manejo de errores: mensaje claro si no hay ruta factible (RF15)
  *
- * @param {{ resultado: Object }} props
+ * @param {{ resultado: Object, consulta: Object, onRequireAuth: Function }} props
  */
-export default function RouteResults({ resultado }) {
+export default function RouteResults({ resultado, consulta, onRequireAuth }) {
+  const { usuario } = useAuth();
+  const [guardando, setGuardando] = useState(false);
+  const [guardado, setGuardado] = useState(false);
+  const [errorGuardar, setErrorGuardar] = useState('');
+
   if (!resultado) return null;
 
   // ─── Ruta no factible (RF15): error sin romper la UI ─────────────────
   if (!resultado.exito) {
+    const coberturaInsuficiente = resultado.code === 'INSUFFICIENT_COVERAGE';
     return (
       <div className="results-section" id="results-error">
         <div className="error-banner">
           <span className="error-banner__icon" aria-hidden="true">⚠️</span>
           <div>
-            <p className="error-banner__title">Ruta no factible</p>
+            <p className="error-banner__title">
+              {coberturaInsuficiente ? 'Cobertura insuficiente en el tramo' : 'Ruta no factible'}
+            </p>
             <p className="error-banner__message">
               {resultado.error ||
                 'No se pudo calcular una ruta válida con los parámetros proporcionados. Intenta con una mayor carga inicial o un vehículo con mayor autonomía.'}
@@ -34,7 +44,33 @@ export default function RouteResults({ resultado }) {
     );
   }
 
-  const { resumen, paradas, origen, destino, vehiculo } = resultado;
+  const { resumen, paradas, origen, destino, vehiculo, geometry, advertencias = [] } = resultado;
+
+  async function handleGuardar() {
+    if (!usuario) {
+      onRequireAuth?.();
+      return;
+    }
+    setErrorGuardar('');
+    setGuardando(true);
+    try {
+      await saveTrip({
+        origen: origen?.nombre || 'Origen',
+        destino: destino?.nombre || 'Destino',
+        vehiculoId: vehiculo?.id,
+        socInicial: consulta?.socInicial ?? 100,
+        resumen,
+        paradas,
+        geometry,
+        advertencias,
+      });
+      setGuardado(true);
+    } catch (error) {
+      setErrorGuardar(error.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
 
   /**
    * Formatea minutos a horas y minutos legibles.
@@ -61,10 +97,27 @@ export default function RouteResults({ resultado }) {
             {vehiculo.modelo} · {vehiculo.bateriaUtilizable_kWh} kWh
           </span>
         )}
+        <div className="results-header__actions">
+          <button
+            type="button"
+            className="btn btn--ghost btn--small"
+            onClick={handleGuardar}
+            disabled={guardando || guardado}
+          >
+            {guardado ? '✓ Guardado' : guardando ? 'Guardando…' : usuario ? 'Guardar viaje' : 'Inicia sesión para guardar'}
+          </button>
+          {errorGuardar && <span className="form-error">{errorGuardar}</span>}
+        </div>
       </div>
 
-      {/* Mapa placeholder */}
-      <MapPlaceholder origen={origen} destino={destino} />
+      <RouteMap geometry={geometry} origen={origen} destino={destino} paradas={paradas} />
+
+      {advertencias.length > 0 && (
+        <div className="warning-banner" role="status">
+          <span aria-hidden="true">⚠️</span>
+          <span>{advertencias.join(' ')}</span>
+        </div>
+      )}
 
       {/* Resumen global (RF18) */}
       <div className="summary-grid" id="summary-grid">
@@ -101,7 +154,7 @@ export default function RouteResults({ resultado }) {
         <div className="summary-card">
           <div className="summary-card__icon" aria-hidden="true">💰</div>
           <div className="summary-card__value">
-            ${resumen.costoTotal_CLP.toLocaleString('es-CL')}
+            {resumen.costoTotal_CLP != null ? `$${resumen.costoTotal_CLP.toLocaleString('es-CL')}` : 'No disponible'}
           </div>
           <div className="summary-card__label">Costo Total (CLP)</div>
         </div>

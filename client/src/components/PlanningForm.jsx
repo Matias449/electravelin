@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fetchVehiculos, fetchCiudades, calcularRuta } from '../utils/api';
+import { useAuth } from '../context/AuthContext';
 
 /**
  * PlanningForm — Formulario principal de planificación de viaje (RF01-RF05, RF20).
@@ -17,10 +18,12 @@ import { fetchVehiculos, fetchCiudades, calcularRuta } from '../utils/api';
  * @param {{ onResult: (data: Object) => void }} props
  */
 export default function PlanningForm({ onResult }) {
+  const { usuario } = useAuth();
   // ─── State: catálogos ──────────────────────────────────────────────────
   const [vehiculos, setVehiculos] = useState([]);
   const [ciudades, setCiudades] = useState([]);
   const [loadingCatalogos, setLoadingCatalogos] = useState(true);
+  const [errorCatalogos, setErrorCatalogos] = useState('');
 
   // ─── State: formulario ─────────────────────────────────────────────────
   const [origenId, setOrigenId] = useState('');
@@ -34,22 +37,32 @@ export default function PlanningForm({ onResult }) {
 
   // ─── Cargar catálogos al montar ────────────────────────────────────────
   useEffect(() => {
+    let active = true;
     async function cargarDatos() {
       try {
         const [vehiculosData, ciudadesData] = await Promise.all([
           fetchVehiculos(),
           fetchCiudades(),
         ]);
+        if (!active) return;
         setVehiculos(vehiculosData);
         setCiudades(ciudadesData);
       } catch (err) {
-        console.error('Error cargando catálogos:', err);
+        if (active) setErrorCatalogos(err.message || 'No se pudo cargar el catálogo.');
       } finally {
-        setLoadingCatalogos(false);
+        if (active) setLoadingCatalogos(false);
       }
     }
     cargarDatos();
+    return () => { active = false; };
   }, []);
+
+  // Preselecciona el vehículo habitual del perfil, si existe.
+  useEffect(() => {
+    if (usuario?.vehiculoFavoritoId && vehiculos.some((vehicle) => vehicle.id === usuario.vehiculoFavoritoId)) {
+      setVehiculoId(usuario.vehiculoFavoritoId);
+    }
+  }, [usuario, vehiculos]);
 
   // ─── Validación ───────────────────────────────────────────────────────
   function validar() {
@@ -76,13 +89,9 @@ export default function PlanningForm({ onResult }) {
     setErrores({});
 
     try {
-      const resultado = await calcularRuta({
-        origenId,
-        destinoId,
-        vehiculoId,
-        socInicial,
-      });
-      onResult(resultado);
+      const consulta = { origenId, destinoId, vehiculoId, socInicial };
+      const resultado = await calcularRuta(consulta);
+      onResult(resultado, consulta);
     } catch (err) {
       onResult({
         exito: false,
@@ -104,6 +113,7 @@ export default function PlanningForm({ onResult }) {
       </h2>
 
       <form onSubmit={handleSubmit} id="planning-form">
+        {errorCatalogos && <div className="error-banner error-banner--compact" role="alert">{errorCatalogos}</div>}
         <div className="form-grid">
           {/* Origen */}
           <div className="form-group">

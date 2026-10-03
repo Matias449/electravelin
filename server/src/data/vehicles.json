@@ -7,7 +7,19 @@
     "consumoReferencia_kWhPor100km": 14.5,
     "potenciaCargaMaxima_kW": 250,
     "conectoresCompatibles": ["CCS2"],
-    "imagenUrl": "/assets/tesla_model3.png"
+    "imagenUrl": "/assets/tesla_model3.png",
+    "activo": true
+  },
+  {
+    "id": "tesla_modely_lr",
+    "modelo": "Tesla Model Y Long Range",
+    "marca": "Tesla",
+    "bateriaUtilizable_kWh": 75,
+    "consumoReferencia_kWhPor100km": 15.7,
+    "potenciaCargaMaxima_kW": 250,
+    "conectoresCompatibles": ["CCS2"],
+    "imagenUrl": "/assets/tesla_modely.png",
+    "activo": true
   },
   {
     "id": "byd_dolphin",
@@ -17,7 +29,30 @@
     "consumoReferencia_kWhPor100km": 13.0,
     "potenciaCargaMaxima_kW": 60,
     "conectoresCompatibles": ["CCS2"],
-    "imagenUrl": "/assets/byd_dolphin.png"
+    "imagenUrl": "/assets/byd_dolphin.png",
+    "activo": true
+  },
+  {
+    "id": "byd_seal",
+    "modelo": "BYD Seal",
+    "marca": "BYD",
+    "bateriaUtilizable_kWh": 82.5,
+    "consumoReferencia_kWhPor100km": 15.2,
+    "potenciaCargaMaxima_kW": 150,
+    "conectoresCompatibles": ["CCS2"],
+    "imagenUrl": "/assets/byd_seal.png",
+    "activo": true
+  },
+  {
+    "id": "byd_atto3",
+    "modelo": "BYD Atto 3",
+    "marca": "BYD",
+    "bateriaUtilizable_kWh": 60.5,
+    "consumoReferencia_kWhPor100km": 15.6,
+    "potenciaCargaMaxima_kW": 88,
+    "conectoresCompatibles": ["CCS2"],
+    "imagenUrl": "/assets/byd_atto3.png",
+    "activo": true
   },
   {
     "id": "hyundai_kona_ev",
@@ -27,7 +62,30 @@
     "consumoReferencia_kWhPor100km": 14.7,
     "potenciaCargaMaxima_kW": 77,
     "conectoresCompatibles": ["CCS2"],
-    "imagenUrl": "/assets/hyundai_kona.png"
+    "imagenUrl": "/assets/hyundai_kona.png",
+    "activo": true
+  },
+  {
+    "id": "hyundai_ioniq5",
+    "modelo": "Hyundai Ioniq 5",
+    "marca": "Hyundai",
+    "bateriaUtilizable_kWh": 72.6,
+    "consumoReferencia_kWhPor100km": 16.8,
+    "potenciaCargaMaxima_kW": 220,
+    "conectoresCompatibles": ["CCS2"],
+    "imagenUrl": "/assets/hyundai_ioniq5.png",
+    "activo": true
+  },
+  {
+    "id": "kia_ev6",
+    "modelo": "Kia EV6",
+    "marca": "Kia",
+    "bateriaUtilizable_kWh": 77.4,
+    "consumoReferencia_kWhPor100km": 16.5,
+    "potenciaCargaMaxima_kW": 240,
+    "conectoresCompatibles": ["CCS2"],
+    "imagenUrl": "/assets/kia_ev6.png",
+    "activo": true
   },
   {
     "id": "nissan_leaf_eplus",
@@ -37,7 +95,8 @@
     "consumoReferencia_kWhPor100km": 17.1,
     "potenciaCargaMaxima_kW": 50,
     "conectoresCompatibles": ["CHAdeMO"],
-    "imagenUrl": "/assets/nissan_leaf.png"
+    "imagenUrl": "/assets/nissan_leaf.png",
+    "activo": true
   },
   {
     "id": "mg_zs_ev",
@@ -47,6 +106,106 @@
     "consumoReferencia_kWhPor100km": 17.0,
     "potenciaCargaMaxima_kW": 76,
     "conectoresCompatibles": ["CCS2"],
-    "imagenUrl": "/assets/mg_zs.png"
+    "imagenUrl": "/assets/mg_zs.png",
+    "activo": true
+  },
+  {
+    "id": "mg4_electric",
+    "modelo": "MG4 Electric",
+    "marca": "MG",
+    "bateriaUtilizable_kWh": 51,
+    "consumoReferencia_kWhPor100km": 16.6,
+    "potenciaCargaMaxima_kW": 117,
+    "conectoresCompatibles": ["CCS2"],
+    "imagenUrl": "/assets/mg4.png",
+    "activo": true
+  },
+  {
+    "id": "renault_megane_etech",
+    "modelo": "Renault Mégane E-Tech",
+    "marca": "Renault",
+    "bateriaUtilizable_kWh": 60,
+    "consumoReferencia_kWhPor100km": 16.4,
+    "potenciaCargaMaxima_kW": 130,
+    "conectoresCompatibles": ["CCS2"],
+    "imagenUrl": "/assets/renault_megane.png",
+    "activo": true
+  },
+  {
+    "id": "peugeot_e208",
+    "modelo": "Peugeot e-208",
+    "marca": "Peugeot",
+    "bateriaUtilizable_kWh": 46.3,
+    "consumoReferencia_kWhPor100km": 15.3,
+    "potenciaCargaMaxima_kW": 100,
+    "conectoresCompatibles": ["CCS2"],
+    "imagenUrl": "/assets/peugeot_e208.png",
+    "activo": true
+  },
+  {
+    "id": "citroen_ec4",
+    "modelo": "Citroën ë-C4",
+    "marca": "Citroën",
+    "bateriaUtilizable_kWh": 50,
+    "consumoReferencia_kWhPor100km": 16.6,
+    "potenciaCargaMaxima_kW": 100,
+    "conectoresCompatibles": ["CCS2"],
+    "imagenUrl": "/assets/citroen_ec4.png",
+    "activo": true
+  },
+  {
+    "id": "volvo_ex30",
+    "modelo": "Volvo EX30",
+    "marca": "Volvo",
+    "bateriaUtilizable_kWh": 64,
+    "consumoReferencia_kWhPor100km": 17.2,
+    "potenciaCargaMaxima_kW": 153,
+    "conectoresCompatibles": ["CCS2"],
+    "imagenUrl": "/assets/volvo_ex30.png",
+    "activo": true
+  },
+  {
+    "id": "bmw_ix1",
+    "modelo": "BMW iX1",
+    "marca": "BMW",
+    "bateriaUtilizable_kWh": 64.7,
+    "consumoReferencia_kWhPor100km": 17.4,
+    "potenciaCargaMaxima_kW": 130,
+    "conectoresCompatibles": ["CCS2"],
+    "imagenUrl": "/assets/bmw_ix1.png",
+    "activo": true
+  },
+  {
+    "id": "chevrolet_bolt_euv",
+    "modelo": "Chevrolet Bolt EUV",
+    "marca": "Chevrolet",
+    "bateriaUtilizable_kWh": 65,
+    "consumoReferencia_kWhPor100km": 16.6,
+    "potenciaCargaMaxima_kW": 55,
+    "conectoresCompatibles": ["CCS2"],
+    "imagenUrl": "/assets/chevrolet_bolt.png",
+    "activo": true
+  },
+  {
+    "id": "ford_mustang_mache",
+    "modelo": "Ford Mustang Mach-E",
+    "marca": "Ford",
+    "bateriaUtilizable_kWh": 70,
+    "consumoReferencia_kWhPor100km": 17.5,
+    "potenciaCargaMaxima_kW": 115,
+    "conectoresCompatibles": ["CCS2"],
+    "imagenUrl": "/assets/ford_mache.png",
+    "activo": true
+  },
+  {
+    "id": "audi_q4_etron",
+    "modelo": "Audi Q4 e-tron",
+    "marca": "Audi",
+    "bateriaUtilizable_kWh": 77,
+    "consumoReferencia_kWhPor100km": 18.0,
+    "potenciaCargaMaxima_kW": 135,
+    "conectoresCompatibles": ["CCS2"],
+    "imagenUrl": "/assets/audi_q4.png",
+    "activo": true
   }
 ]

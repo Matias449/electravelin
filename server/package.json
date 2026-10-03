@@ -1,11 +1,15 @@
 {
   "name": "electravelin-server",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "API backend de Electravelin — Planificador de rutas para vehículos eléctricos en Chile",
   "main": "src/index.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "start": "node src/index.js",
-    "dev": "node --watch src/index.js"
+    "dev": "node --watch src/index.js",
+    "test": "node --test"
   },
   "dependencies": {
     "cors": "^2.8.5",
