@@ -45,6 +45,26 @@ test('calcula una ruta realista y conserva la reserva mínima', async () => {
   assert.equal(result.paradas[0].conectorUsado, 'CCS2');
 });
 
+test('con batería baja propone una carga inicial en una electrolinera compatible del origen', async () => {
+  const originStation = {
+    ...station({ longitude: 0 }),
+    id: 'origin-station',
+    nombre: 'Carga de salida',
+  };
+  const service = createRoutePlanningService({
+    providers: providerFixture(),
+    vehicles: [vehicle],
+    stations: [originStation, station({ longitude: 0.5 })],
+  });
+  const result = await service.plan({ origin: 'Origen', destination: 'Destino', vehiculoId: 'test-ev', socInicial: 20 });
+
+  assert.equal(result.exito, true);
+  assert.equal(result.paradas[0].estacionId, 'origin-station');
+  assert.equal(result.paradas[0].esCargaInicial, true);
+  assert.ok(result.advertencias.some((warning) => /carga de salida/i.test(warning)));
+  assert.equal(result.estacionesOrigenCompatibles[0].id, 'origin-station');
+});
+
 test('declara inviable una ruta cuando la estación cercana es incompatible', async () => {
   const service = createRoutePlanningService({ providers: providerFixture(), vehicles: [vehicle], stations: [station({ connector: 'CHAdeMO' })] });
   const result = await service.plan({ origin: 'Origen', destination: 'Destino', vehiculoId: 'test-ev', socInicial: 40 });

@@ -26,6 +26,7 @@ export default function RouteResults({ resultado, consulta, onRequireAuth }) {
   // ─── Ruta no factible (RF15): error sin romper la UI ─────────────────
   if (!resultado.exito) {
     const coberturaInsuficiente = resultado.code === 'INSUFFICIENT_COVERAGE';
+    const estacionesOrigen = resultado.estacionesOrigenCompatibles || [];
     return (
       <div className="results-section" id="results-error">
         <div className="error-banner">
@@ -40,6 +41,20 @@ export default function RouteResults({ resultado, consulta, onRequireAuth }) {
             </p>
           </div>
         </div>
+        {estacionesOrigen.length > 0 && (
+          <div className="card route-alternatives" role="status">
+            <h3>Electrolineras compatibles cerca del origen</h3>
+            <p>Antes de salir, carga en una de estas estaciones y vuelve a calcular la ruta.</p>
+            <ul className="route-alternatives__list">
+              {estacionesOrigen.map((estacion) => (
+                <li key={estacion.id}>
+                  <strong>{estacion.nombre}</strong>
+                  <span>{estacion.ciudad} · {estacion.conector} · {estacion.potenciaMaxima_kW} kW · a {estacion.distanciaKm} km</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     );
   }

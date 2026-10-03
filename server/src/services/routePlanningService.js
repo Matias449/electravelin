@@ -5,6 +5,7 @@ const defaultStations = require('../data/stations.json');
 const defaultCities = require('../data/mockRoutes.json').ciudades;
 
 const ROUTE_CORRIDOR_KM = 35;
+const ORIGIN_STATION_RADIUS_KM = 8;
 const ROUND = (value, decimals = 2) => Math.round(value * (10 ** decimals)) / (10 ** decimals);
 
 function haversineKm(a, b) {
@@ -61,7 +62,39 @@ function buildCandidateStations({ stations, vehicle, coordinates, totalDistanceK
     .sort((a, b) => a.route.progressKm - b.route.progressKm);
 }
 
-function calculateChargingPlan({ vehicle, stations, totalDistanceKm, drivingMinutes, socInicial }) {
+function buildOriginStations({ stations, vehicle, origin }) {
+  return stations
+    .filter((station) => station.disponible)
+    .map((station) => ({
+      ...station,
+      compatibleConnector: encontrarConectorCompatible(vehicle.conectoresCompatibles, station.conectoresDisponibles),
+      distanceFromOriginKm: haversineKm(origin, station),
+    }))
+    .filter((station) => station.compatibleConnector && station.distanceFromOriginKm <= ORIGIN_STATION_RADIUS_KM)
+    .sort((a, b) => a.distanceFromOriginKm - b.distanceFromOriginKm);
+}
+
+function formatStation(station, extra = {}) {
+  return {
+    estacionId: station.id,
+    estacionNombre: station.nombre,
+    ciudad: station.ciudad,
+    operador: station.operador,
+    conectorUsado: station.compatibleConnector,
+    potenciaEfectiva_kW: extra.potenciaEfectiva_kW,
+    socLlegada: ROUND(extra.socLlegada),
+    socSalida: ROUND(extra.socSalida),
+    energiaCargada_kWh: extra.recarga?.energiaCargada_kWh,
+    tiempoCarga_min: extra.recarga?.tiempoCarga_min,
+    costo_CLP: extra.recarga?.costo_CLP,
+    latitud: station.latitud,
+    longitud: station.longitud,
+    distanciaAlTrazado_km: ROUND(extra.distanciaAlTrazadoKm ?? station.route?.distanceKm ?? station.distanceFromOriginKm ?? 0),
+    esCargaInicial: Boolean(extra.esCargaInicial),
+  };
+}
+
+function calculateChargingPlan({ vehicle, stations, originStations = [], totalDistanceKm, drivingMinutes, socInicial }) {
   const energyPerKm = vehicle.consumoReferencia_kWhPor100km / 100;
   const socForDistance = (distanceKm) => (distanceKm * energyPerKm / vehicle.bateriaUtilizable_kWh) * 100;
   const maxDistanceWithReserve = ((100 - RESERVA_SOC_MIN) / 100) * vehicle.bateriaUtilizable_kWh / energyPerKm;
@@ -84,6 +117,47 @@ function calculateChargingPlan({ vehicle, stations, totalDistanceKm, drivingMinu
     const stop = reachableStations.at(-1);
 
     if (!stop) {
+      // Una batería baja no debe ocultar la red de carga disponible en el origen.
+      // Si hay un cargador compatible en la ciudad de salida, se propone cargar antes
+      // de iniciar el viaje y luego se retoma el plan normal.
+      const originStation = progressKm === 0 ? originStations[0] : null;
+      if (originStation) {
+        const furthestAtFull = maxDistanceWithReserve;
+        const nextTarget = totalDistanceKm <= furthestAtFull
+          ? { progressKm: totalDistanceKm }
+          : stations.filter((station) => station.route.progressKm > 0.1 && station.route.progressKm <= furthestAtFull + 0.01).at(-1);
+
+        if (nextTarget) {
+          const requiredSoc = RESERVA_SOC_MIN + socForDistance(nextTarget.progressKm);
+          const socSalida = Math.max(OBJETIVO_CARGA_MAX, requiredSoc);
+          if (socSalida <= 100.001) {
+            const recarga = calcularRecarga(
+              soc,
+              Math.min(100, socSalida),
+              vehicle.bateriaUtilizable_kWh,
+              originStation.potenciaMaxima_kW,
+              vehicle.potenciaCargaMaxima_kW,
+              originStation.tarifa_CLPporKWh
+            );
+            stops.push({
+              orden: stops.length + 1,
+              ...formatStation(originStation, {
+                potenciaEfectiva_kW: Math.min(originStation.potenciaMaxima_kW, vehicle.potenciaCargaMaxima_kW),
+                socLlegada: soc,
+                socSalida: Math.min(100, socSalida),
+                recarga,
+                distanciaAlTrazadoKm: originStation.distanceFromOriginKm,
+                esCargaInicial: true,
+              }),
+            });
+            chargingMinutes += recarga.tiempoCarga_min;
+            totalCost += recarga.costo_CLP;
+            soc = Math.min(100, socSalida);
+            warnings.push(`Batería inicial insuficiente: se agregó una carga de salida en ${originStation.nombre}.`);
+            continue;
+          }
+        }
+      }
       return {
         exito: false,
         paradas: stops,
@@ -133,20 +207,12 @@ function calculateChargingPlan({ vehicle, stations, totalDistanceKm, drivingMinu
     );
     stops.push({
       orden: stops.length + 1,
-      estacionId: stop.id,
-      estacionNombre: stop.nombre,
-      ciudad: stop.ciudad,
-      operador: stop.operador,
-      conectorUsado: stop.compatibleConnector,
-      potenciaEfectiva_kW: Math.min(stop.potenciaMaxima_kW, vehicle.potenciaCargaMaxima_kW),
-      socLlegada: ROUND(socLlegada),
-      socSalida: ROUND(Math.min(100, socSalida)),
-      energiaCargada_kWh: recarga.energiaCargada_kWh,
-      tiempoCarga_min: recarga.tiempoCarga_min,
-      costo_CLP: recarga.costo_CLP,
-      latitud: stop.latitud,
-      longitud: stop.longitud,
-      distanciaAlTrazado_km: ROUND(stop.route.distanceKm),
+      ...formatStation(stop, {
+        potenciaEfectiva_kW: Math.min(stop.potenciaMaxima_kW, vehicle.potenciaCargaMaxima_kW),
+        socLlegada,
+        socSalida: Math.min(100, socSalida),
+        recarga,
+      }),
     });
     chargingMinutes += recarga.tiempoCarga_min;
     totalCost += recarga.costo_CLP;
@@ -206,9 +272,11 @@ function createRoutePlanningService({ providers = createRoutingProviders(), vehi
       coordinates: directions.geometry.coordinates,
       totalDistanceKm,
     });
+    const originStations = buildOriginStations({ stations, vehicle, origin: resolvedOrigin });
     const calculation = calculateChargingPlan({
       vehicle,
       stations: candidateStations,
+      originStations,
       totalDistanceKm,
       drivingMinutes: directions.duracion_s / 60,
       socInicial,
@@ -229,6 +297,15 @@ function createRoutePlanningService({ providers = createRoutingProviders(), vehi
       destino: resolvedDestination,
       geometry: directions.geometry,
       advertencias: [...(calculation.advertencias || []), ...coverageWarning],
+      estacionesOrigenCompatibles: originStations.map((station) => ({
+        id: station.id,
+        nombre: station.nombre,
+        ciudad: station.ciudad,
+        operador: station.operador,
+        conector: station.compatibleConnector,
+        potenciaMaxima_kW: station.potenciaMaxima_kW,
+        distanciaKm: ROUND(station.distanceFromOriginKm),
+      })),
     };
   }
 
@@ -241,6 +318,7 @@ module.exports = {
   haversineKm,
   projectStationOnRoute,
   buildCandidateStations,
+  buildOriginStations,
   calculateChargingPlan,
   createRoutePlanningService,
 };

@@ -1253,6 +1253,40 @@ a:hover {
   gap: var(--space-xs);
 }
 
+.route-alternatives {
+  margin-top: var(--space-md);
+  border-left: 4px solid var(--accent-primary);
+}
+
+.route-alternatives h3,
+.route-alternatives p {
+  margin: 0 0 var(--space-sm);
+}
+
+.route-alternatives p {
+  color: var(--text-secondary);
+}
+
+.route-alternatives__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.route-alternatives__list li {
+  display: grid;
+  gap: 2px;
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.route-alternatives__list span {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
 /* ─── Responsive extra ──────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .header__top {
