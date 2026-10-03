@@ -128,7 +128,8 @@ function calculateChargingPlan({ vehicle, stations, originStations = [], totalDi
           : stations.filter((station) => station.route.progressKm > 0.1 && station.route.progressKm <= furthestAtFull + 0.01).at(-1);
 
         if (nextTarget) {
-          const requiredSoc = RESERVA_SOC_MIN + socForDistance(nextTarget.progressKm);
+          const targetKm = nextTarget.progressKm ?? nextTarget.route?.progressKm;
+          const requiredSoc = RESERVA_SOC_MIN + socForDistance(targetKm);
           const socSalida = Math.max(OBJETIVO_CARGA_MAX, requiredSoc);
           if (socSalida <= 100.001) {
             const recarga = calcularRecarga(
@@ -185,7 +186,8 @@ function calculateChargingPlan({ vehicle, stations, originStations = [], totalDi
       };
     }
 
-    const requiredSoc = RESERVA_SOC_MIN + socForDistance(nextTarget.progressKm - stop.route.progressKm);
+    const targetKm = nextTarget.progressKm ?? nextTarget.route?.progressKm;
+    const requiredSoc = RESERVA_SOC_MIN + socForDistance(targetKm - stop.route.progressKm);
     const socSalida = Math.max(OBJETIVO_CARGA_MAX, requiredSoc);
     if (socSalida > 100.001) {
       return {

@@ -65,6 +65,24 @@ test('con batería baja propone una carga inicial en una electrolinera compatibl
   assert.equal(result.estacionesOrigenCompatibles[0].id, 'origin-station');
 });
 
+test('con batería baja en viaje largo que excede la autonomía completa agrega carga en origen y parada intermedia', async () => {
+  const originStation = { ...station({ longitude: 0 }), id: 'origin-station', nombre: 'Carga de salida' };
+  const intermediateStation = { ...station({ longitude: 1.0 }), id: 'intermediate-station', nombre: 'Parada intermedia' };
+  const service = createRoutePlanningService({
+    providers: providerFixture(300000),
+    vehicles: [vehicle],
+    stations: [originStation, intermediateStation],
+  });
+  const result = await service.plan({ origin: 'Origen', destination: 'Destino', vehiculoId: 'test-ev', socInicial: 15 });
+
+  assert.equal(result.exito, true);
+  assert.equal(result.paradas.length, 2);
+  assert.equal(result.paradas[0].estacionId, 'origin-station');
+  assert.equal(result.paradas[0].esCargaInicial, true);
+  assert.equal(result.paradas[1].estacionId, 'intermediate-station');
+  assert.ok(result.resumen.socFinal >= 15);
+});
+
 test('declara inviable una ruta cuando la estación cercana es incompatible', async () => {
   const service = createRoutePlanningService({ providers: providerFixture(), vehicles: [vehicle], stations: [station({ connector: 'CHAdeMO' })] });
   const result = await service.plan({ origin: 'Origen', destination: 'Destino', vehiculoId: 'test-ev', socInicial: 40 });
