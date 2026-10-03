@@ -136,14 +136,40 @@ export default function CatalogPanel({ onRequireAuth }) {
               const fav = esFavorito(vehicle.id, 'vehiculo');
               return (
                 <li key={vehicle.id} className="list__item">
-                  <div>
-                    <strong style={{ fontFamily: 'var(--font-heading)', fontSize: '1rem', color: '#fff' }}>
-                      {vehicle.marca} {vehicle.modelo}
-                    </strong>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <strong style={{ fontFamily: 'var(--font-heading)', fontSize: '1rem', color: '#fff' }}>
+                        {vehicle.marca} {vehicle.modelo}
+                      </strong>
+                      {(vehicle.tieneModelo3D || vehicle.id?.includes('tesla')) ? (
+                        <span style={{
+                          background: 'rgba(16, 185, 129, 0.15)',
+                          border: '1px solid rgba(16, 185, 129, 0.4)',
+                          color: '#10b981',
+                          fontSize: '0.68rem',
+                          fontWeight: 700,
+                          fontFamily: 'var(--font-mono)',
+                          padding: '2px 6px',
+                          borderRadius: 4
+                        }}>
+                          ★ 3D REAL (GLB)
+                        </span>
+                      ) : (
+                        <span style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          color: '#94a3b8',
+                          fontSize: '0.68rem',
+                          fontFamily: 'var(--font-mono)',
+                          padding: '2px 6px',
+                          borderRadius: 4
+                        }}>
+                          FICHA 2D
+                        </span>
+                      )}
+                    </div>
                     <div className="list__meta" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.76rem', marginTop: 4 }}>
                       <span style={{ color: '#00d4ff' }}>{vehicle.bateriaUtilizable_kWh} kWh</span> · {vehicle.consumoReferencia_kWhPor100km} kWh/100km · Potencia máx: <strong>{vehicle.potenciaCargaMaxima_kW} kW</strong> · Conectores: {vehicle.conectoresCompatibles.join(', ')}
                     </div>
-                  </div>
                   <button
                     type="button"
                     className={`btn btn--small ${fav ? 'btn--ghost' : 'btn--primary'}`}

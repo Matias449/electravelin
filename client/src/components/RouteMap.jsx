@@ -69,10 +69,10 @@ export default function RouteMap({ geometry, origen, destino, paradas = [] }) {
     setLoadError(false);
     const map = L.map(elementRef.current, { scrollWheelZoom: false, attributionControl: true });
 
-    // Modern clean tiles (CartoDB Voyager)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    // Standard OpenStreetMap tiles (100% free, no API key required)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
-      attribution: '&copy; OpenStreetMap &copy; CARTO',
+      attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map);
 
     // Glow background line

@@ -108,12 +108,15 @@ export default function PlanningForm({ onResult }) {
 
   // Normalizar datos para el visor 3D
   const activeVehicle3D = vehiculoSeleccionado ? {
+    id: vehiculoSeleccionado.id,
     marca: vehiculoSeleccionado.marca || vehiculoSeleccionado.modelo?.split(' ')[0] || 'EV',
     modelo: vehiculoSeleccionado.modelo,
     bateria_util_kWh: vehiculoSeleccionado.bateriaUtilizable_kWh,
     consumo_medio_kWh_100km: vehiculoSeleccionado.consumoReferencia_kWhPor100km,
     potencia_carga_max_kW: vehiculoSeleccionado.potenciaCargaMaxima_kW,
     conectores: vehiculoSeleccionado.conectoresCompatibles,
+    tieneModelo3D: Boolean(vehiculoSeleccionado.tieneModelo3D || vehiculoSeleccionado.id === 'tesla_model3_lr' || vehiculoSeleccionado.id === 'tesla_modely_lr'),
+    modelo3DUrl: vehiculoSeleccionado.modelo3DUrl || ((vehiculoSeleccionado.id === 'tesla_model3_lr' || vehiculoSeleccionado.id === 'tesla_modely_lr') ? '/models/tesla-model-3.glb' : null),
   } : null;
 
   return (
@@ -128,12 +131,13 @@ export default function PlanningForm({ onResult }) {
         </span>
       </div>
 
-      {/* Visor 3D Interactivo del Vehículo con Celdas de Batería Reales */}
+      {/* Visor 3D Interactivo: Carga modelo GLB real si está disponible o ficha 2D */}
       {activeVehicle3D && (
         <Vehicle3DViewer
           vehiculo={activeVehicle3D}
           soc={socInicial}
           isCharging={cargando}
+          onSelectRealModel={(id) => setVehiculoId(id)}
         />
       )}
 
@@ -199,20 +203,32 @@ export default function PlanningForm({ onResult }) {
               disabled={loadingCatalogos}
             >
               <option value="">— Selecciona tu vehículo —</option>
-              {vehiculos.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.modelo} — {v.bateriaUtilizable_kWh} kWh | {v.consumoReferencia_kWhPor100km} kWh/100km
-                </option>
-              ))}
+              {vehiculos.map((v) => {
+                const has3D = Boolean(v.tieneModelo3D || v.id === 'tesla_model3_lr' || v.id === 'tesla_modely_lr');
+                return (
+                  <option key={v.id} value={v.id}>
+                    {has3D ? '★ [3D Real] ' : ''}{v.modelo} — {v.bateriaUtilizable_kWh} kWh | {v.consumoReferencia_kWhPor100km} kWh/100km
+                  </option>
+                );
+              })}
             </select>
             {errores.vehiculo && (
               <span className="form-error">{errores.vehiculo}</span>
             )}
 
             {vehiculoSeleccionado && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6, flexWrap: 'wrap', gap: 6 }}>
                 <span className="form-helper">
                   Conector: <strong>{vehiculoSeleccionado.conectoresCompatibles?.join(', ')}</strong> · Carga máx: <strong>{vehiculoSeleccionado.potenciaCargaMaxima_kW} kW DC</strong>
+                  {(vehiculoSeleccionado.tieneModelo3D || vehiculoSeleccionado.id?.includes('tesla')) ? (
+                    <span style={{ marginLeft: 8, color: '#10b981', fontWeight: 600, fontSize: '0.72rem' }}>
+                      ● Modelo 3D Activo
+                    </span>
+                  ) : (
+                    <span style={{ marginLeft: 8, color: '#94a3b8', fontSize: '0.72rem' }}>
+                      ○ Ficha Técnica 2D
+                    </span>
+                  )}
                 </span>
                 <button
                   type="button"

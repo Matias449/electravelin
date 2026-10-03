@@ -63,7 +63,8 @@ function createRoutingProviders({
 
   async function getDirectionsWithOpenRouteService(origin, destination) {
     if (!orsApiKey) {
-      throw new RoutingProviderError('El ruteo geográfico no está configurado: falta ORS_API_KEY en el servidor.', 'openrouteservice');
+      // Si falta la API key, recurrir transparentemente a OSRM sin bloquear al usuario
+      return getDirectionsWithOsrm(origin, destination);
     }
 
     let response;
@@ -87,18 +88,20 @@ function createRoutingProviders({
         }
       );
     } catch (error) {
-      throw new RoutingProviderError('No fue posible contactar a OpenRouteService.', 'openrouteservice', error);
+      // Fallback a OSRM ante error de red en ORS
+      return getDirectionsWithOsrm(origin, destination);
     }
 
     if (!response.ok) {
-      throw new RoutingProviderError(`OpenRouteService respondió con estado ${response.status}.`, 'openrouteservice');
+      // Si la API key está vencida o rechazada, fallback a OSRM
+      return getDirectionsWithOsrm(origin, destination);
     }
 
     const result = await response.json();
     const feature = result.features?.[0];
     const summary = feature?.properties?.summary;
     if (feature?.geometry?.type !== 'LineString' || !Array.isArray(feature.geometry.coordinates) || !summary) {
-      throw new RoutingProviderError('OpenRouteService devolvió una respuesta de ruta inválida.', 'openrouteservice');
+      return getDirectionsWithOsrm(origin, destination);
     }
 
     return {
@@ -115,15 +118,15 @@ function createRoutingProviders({
     try {
       response = await fetchImpl(url, { headers: { Accept: 'application/json' } });
     } catch (error) {
-      throw new RoutingProviderError('No fue posible contactar a OSRM.', 'osrm', error);
+      throw new RoutingProviderError('No fue posible contactar al servicio de ruteo OSRM.', 'osrm', error);
     }
     if (!response.ok) {
-      throw new RoutingProviderError(`OSRM respondiÃ³ con estado ${response.status}.`, 'osrm');
+      throw new RoutingProviderError(`OSRM respondió con estado ${response.status}.`, 'osrm');
     }
     const result = await response.json();
     const route = result.code === 'Ok' ? result.routes?.[0] : null;
     if (!route || route.geometry?.type !== 'LineString' || !Array.isArray(route.geometry.coordinates)) {
-      throw new RoutingProviderError(`OSRM no encontrÃ³ una ruta (${result.code || 'respuesta invÃ¡lida'}).`, 'osrm');
+      throw new RoutingProviderError(`OSRM no encontró una ruta (${result.code || 'respuesta inválida'}).`, 'osrm');
     }
     return {
       geometry: route.geometry,
@@ -133,7 +136,9 @@ function createRoutingProviders({
   }
 
   async function getDirections(origin, destination) {
-    if (routingProvider === 'openrouteservice') return getDirectionsWithOpenRouteService(origin, destination);
+    if (routingProvider === 'openrouteservice' && orsApiKey) {
+      return getDirectionsWithOpenRouteService(origin, destination);
+    }
     return getDirectionsWithOsrm(origin, destination);
   }
 
