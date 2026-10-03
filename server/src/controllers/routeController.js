@@ -18,6 +18,7 @@ const mockRoutes = require('../data/mockRoutes.json');
 const {
   calcularRutaOptima,
 } = require('../services/batteryService');
+const { createRoutePlanningService, RoutingProviderError } = require('../services/routePlanningService');
 
 /**
  * Resuelve la secuencia de tramos entre dos ciudades a lo largo de la Ruta 5.
@@ -85,7 +86,7 @@ function resolverTramos(origenId, destinoId) {
 }
 
 /**
- * Handler principal: POST /api/calcular-ruta
+ * Construye el handler del endpoint v1: POST /api/calcular-ruta
  *
  * Body esperado (JSON):
  * {
@@ -95,9 +96,10 @@ function resolverTramos(origenId, destinoId) {
  *   "socInicial": 90
  * }
  */
-async function calcularRuta(req, res) {
-  try {
-    const { origenId, destinoId, vehiculoId, socInicial } = req.body;
+function crearCalcularRuta(logger = null) {
+  return async function calcularRuta(req, res) {
+    try {
+      const { origenId, destinoId, vehiculoId, socInicial } = req.body;
 
     // ─── Validación de inputs (RF01-RF05) ────────────────────────────────
     const erroresValidacion = [];
@@ -185,50 +187,57 @@ async function calcularRuta(req, res) {
       error: null,
     });
   } catch (err) {
-    console.error('[ERROR] calcularRuta:', err);
+    logger?.error('calcular_ruta_error', { requestId: req.requestId, message: err.message });
     return res.status(500).json({
       exito: false,
       error: 'Error interno del servidor. Por favor intente nuevamente.',
     });
   }
+  };
 }
 
 /**
- * Handler: GET /api/vehiculos
- * Retorna el catálogo completo de VE disponibles.
+ * Construye el handler del planificador geográfico. La inyección del planner
+ * permite probar el contrato HTTP sin depender de proveedores externos.
+ * Acepta un planner ya construido o una función que lo construye por request
+ * (necesario para que el catálogo administrable se refleje en el cálculo).
  */
-function obtenerVehiculos(req, res) {
-  return res.status(200).json({
-    exito: true,
-    vehiculos: vehicles,
-  });
-}
+function crearPlanRoute(routePlanner = createRoutePlanningService(), logger = null) {
+  const resolvePlanner = typeof routePlanner === 'function' ? routePlanner : () => routePlanner;
 
-/**
- * Handler: GET /api/ciudades
- * Retorna la lista de ciudades disponibles para seleccionar como origen/destino.
- */
-function obtenerCiudades(req, res) {
-  return res.status(200).json({
-    exito: true,
-    ciudades: mockRoutes.ciudades,
-  });
-}
-
-/**
- * Handler: GET /api/estaciones
- * Retorna la lista completa de estaciones de carga.
- */
-function obtenerEstaciones(req, res) {
-  return res.status(200).json({
-    exito: true,
-    estaciones: stations,
-  });
+  return async function planRoute(req, res) {
+    try {
+      const planner = resolvePlanner();
+      const result = await planner.plan(req.body || {});
+      const status = result.code === 'VALIDATION_ERROR' ? 400
+        : result.code === 'VEHICLE_NOT_FOUND' ? 404
+          : 200;
+      return res.status(status).json(result);
+    } catch (error) {
+      if (error instanceof RoutingProviderError) {
+        logger?.warn('routing_provider_error', {
+          requestId: req.requestId,
+          proveedor: error.provider,
+          message: error.message,
+        });
+        return res.status(502).json({
+          exito: false,
+          code: 'ROUTING_PROVIDER_ERROR',
+          proveedor: error.provider,
+          error: 'El proveedor de geocodificación o ruteo no está disponible. Intenta nuevamente.',
+        });
+      }
+      logger?.error('plan_route_error', { requestId: req.requestId, message: error.message });
+      return res.status(500).json({
+        exito: false,
+        code: 'INTERNAL_ERROR',
+        error: 'Error interno del servidor. Por favor intente nuevamente.',
+      });
+    }
+  };
 }
 
 module.exports = {
-  calcularRuta,
-  obtenerVehiculos,
-  obtenerCiudades,
-  obtenerEstaciones,
+  crearCalcularRuta,
+  crearPlanRoute,
 };

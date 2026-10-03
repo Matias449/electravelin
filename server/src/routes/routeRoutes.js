@@ -1,26 +1,25 @@
-/**
- * routeRoutes.js — Definición de rutas Express para la API de Electravelin
- */
-
 const express = require('express');
-const router = express.Router();
 const {
-  calcularRuta,
-  obtenerVehiculos,
-  obtenerCiudades,
-  obtenerEstaciones,
+  crearCalcularRuta,
+  crearPlanRoute,
 } = require('../controllers/routeController');
 
-// POST /api/calcular-ruta — Endpoint principal de cálculo (RF11-RF15)
-router.post('/calcular-ruta', calcularRuta);
+function createRouteRoutes({ routePlanner, catalogController, cityController, logger } = {}) {
+  const router = express.Router();
 
-// GET /api/vehiculos — Catálogo de VE (RF06)
-router.get('/vehiculos', obtenerVehiculos);
+  // Endpoint v1, mantenido durante la migración de los clientes existentes.
+  router.post('/calcular-ruta', crearCalcularRuta(logger));
 
-// GET /api/ciudades — Ciudades disponibles
-router.get('/ciudades', obtenerCiudades);
+  // Endpoint v2: Nominatim + OpenRouteService desde el backend.
+  router.post('/routes/plan', crearPlanRoute(routePlanner, logger));
 
-// GET /api/estaciones — Estaciones de carga (RF07)
-router.get('/estaciones', obtenerEstaciones);
+  // Catálogo público con filtros (marca, conector, ciudad, operador, potencia).
+  router.get('/vehiculos', catalogController.listVehicles);
+  router.get('/estaciones', catalogController.listStations);
+  router.get('/estaciones/fuente', catalogController.getSecMetadata);
+  router.get('/ciudades', cityController.listCities);
 
-module.exports = router;
+  return router;
+}
+
+module.exports = createRouteRoutes;
