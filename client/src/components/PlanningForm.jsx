@@ -1,24 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { fetchVehiculos, fetchCiudades, calcularRuta } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import Vehicle3DViewer from './Vehicle3DViewer';
+import ConnectorBlueprint from './ConnectorBlueprint';
+import { Compass, MapPin, Navigation, Car, Zap, Battery, ShieldAlert, Cpu } from 'lucide-react';
 
 /**
- * PlanningForm — Formulario principal de planificación de viaje (RF01-RF05, RF20).
- *
- * Inputs:
- *  - Origen (selector de ciudad)
- *  - Destino (selector de ciudad)
- *  - Vehículo eléctrico (selector del catálogo)
- *  - Batería inicial (slider 0-100%)
- *
- * Validación:
- *  - No permite inputs vacíos ni fuera de rango.
- *  - Estado "Cargando..." en el botón para evitar doble envío (RF20).
+ * PlanningForm — Formulario principal de planificación de viaje (RF01-RF05, RF20)
+ * Mejorado con Visor 3D Interactivo en Tiempo Real, Telemetría y Blueprints de Conectores.
  *
  * @param {{ onResult: (data: Object) => void }} props
  */
 export default function PlanningForm({ onResult }) {
   const { usuario } = useAuth();
+
   // ─── State: catálogos ──────────────────────────────────────────────────
   const [vehiculos, setVehiculos] = useState([]);
   const [ciudades, setCiudades] = useState([]);
@@ -30,6 +25,7 @@ export default function PlanningForm({ onResult }) {
   const [destinoId, setDestinoId] = useState('');
   const [vehiculoId, setVehiculoId] = useState('');
   const [socInicial, setSocInicial] = useState(80);
+  const [showBlueprint, setShowBlueprint] = useState(false);
 
   // ─── State: UX ────────────────────────────────────────────────────────
   const [cargando, setCargando] = useState(false);
@@ -47,6 +43,11 @@ export default function PlanningForm({ onResult }) {
         if (!active) return;
         setVehiculos(vehiculosData);
         setCiudades(ciudadesData);
+
+        // Preselecciona el primer vehículo si no hay uno seleccionado
+        if (vehiculosData.length > 0 && !vehiculoId) {
+          setVehiculoId(vehiculosData[0].id);
+        }
       } catch (err) {
         if (active) setErrorCatalogos(err.message || 'No se pudo cargar el catálogo.');
       } finally {
@@ -103,22 +104,46 @@ export default function PlanningForm({ onResult }) {
   }
 
   // ─── Obtener info del vehículo seleccionado ───────────────────────────
-  const vehiculoSeleccionado = vehiculos.find((v) => v.id === vehiculoId);
+  const vehiculoSeleccionado = vehiculos.find((v) => v.id === vehiculoId) || vehiculos[0];
+
+  // Normalizar datos para el visor 3D
+  const activeVehicle3D = vehiculoSeleccionado ? {
+    marca: vehiculoSeleccionado.marca || vehiculoSeleccionado.modelo?.split(' ')[0] || 'EV',
+    modelo: vehiculoSeleccionado.modelo,
+    bateria_util_kWh: vehiculoSeleccionado.bateriaUtilizable_kWh,
+    consumo_medio_kWh_100km: vehiculoSeleccionado.consumoReferencia_kWhPor100km,
+    potencia_carga_max_kW: vehiculoSeleccionado.potenciaCargaMaxima_kW,
+    conectores: vehiculoSeleccionado.conectoresCompatibles,
+  } : null;
 
   return (
     <div className="card">
-      <h2 className="card__title">
-        <span className="card__title-icon">🗺️</span>
-        Planifica tu Viaje
-      </h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-md)' }}>
+        <h2 className="card__title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Compass size={22} color="#00d4ff" />
+          Planifica tu Viaje
+        </h2>
+        <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+          RUTA 5 SUR
+        </span>
+      </div>
+
+      {/* Visor 3D Interactivo del Vehículo con Celdas de Batería Reales */}
+      {activeVehicle3D && (
+        <Vehicle3DViewer
+          vehiculo={activeVehicle3D}
+          soc={socInicial}
+          isCharging={cargando}
+        />
+      )}
 
       <form onSubmit={handleSubmit} id="planning-form">
         {errorCatalogos && <div className="error-banner error-banner--compact" role="alert">{errorCatalogos}</div>}
         <div className="form-grid">
           {/* Origen */}
           <div className="form-group">
-            <label className="form-label" htmlFor="input-origen">
-              Ciudad de Origen
+            <label className="form-label" htmlFor="input-origen" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <Navigation size={13} color="#00d4ff" /> Ciudad de Origen
             </label>
             <select
               id="input-origen"
@@ -139,8 +164,8 @@ export default function PlanningForm({ onResult }) {
 
           {/* Destino */}
           <div className="form-group">
-            <label className="form-label" htmlFor="input-destino">
-              Ciudad de Destino
+            <label className="form-label" htmlFor="input-destino" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <MapPin size={13} color="#10b981" /> Ciudad de Destino
             </label>
             <select
               id="input-destino"
@@ -163,8 +188,8 @@ export default function PlanningForm({ onResult }) {
 
           {/* Vehículo */}
           <div className="form-group form-group--full">
-            <label className="form-label" htmlFor="input-vehiculo">
-              Vehículo Eléctrico
+            <label className="form-label" htmlFor="input-vehiculo" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <Car size={13} color="#00d4ff" /> Vehículo Eléctrico
             </label>
             <select
               id="input-vehiculo"
@@ -183,11 +208,30 @@ export default function PlanningForm({ onResult }) {
             {errores.vehiculo && (
               <span className="form-error">{errores.vehiculo}</span>
             )}
+
             {vehiculoSeleccionado && (
-              <span className="form-helper">
-                Conectores: {vehiculoSeleccionado.conectoresCompatibles.join(', ')} · 
-                Carga máx: {vehiculoSeleccionado.potenciaCargaMaxima_kW} kW
-              </span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+                <span className="form-helper">
+                  Conector: <strong>{vehiculoSeleccionado.conectoresCompatibles?.join(', ')}</strong> · Carga máx: <strong>{vehiculoSeleccionado.potenciaCargaMaxima_kW} kW DC</strong>
+                </span>
+                <button
+                  type="button"
+                  className="btn btn--ghost btn--small"
+                  style={{ fontSize: '0.72rem', padding: '3px 8px', height: 'auto', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                  onClick={() => setShowBlueprint(!showBlueprint)}
+                >
+                  <Cpu size={12} /> {showBlueprint ? 'Ocultar Blueprint' : 'Ver Blueprint Pinout'}
+                </button>
+              </div>
+            )}
+
+            {/* Blueprint Técnico Desplegable */}
+            {showBlueprint && vehiculoSeleccionado && (
+              <ConnectorBlueprint
+                conector={vehiculoSeleccionado.conectoresCompatibles?.[0] || 'CCS2'}
+                potenciaKw={vehiculoSeleccionado.potenciaCargaMaxima_kW || 100}
+                active={true}
+              />
             )}
           </div>
 
@@ -195,10 +239,10 @@ export default function PlanningForm({ onResult }) {
           <div className="form-group form-group--full">
             <div className="battery-slider-container">
               <div className="battery-slider-header">
-                <label className="form-label" htmlFor="input-bateria">
-                  Batería Inicial
+                <label className="form-label" htmlFor="input-bateria" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <Battery size={14} color="#00d4ff" /> Nivel de Batería de Salida (SoC)
                 </label>
-                <span className="battery-value">{socInicial}%</span>
+                <span className="battery-value" style={{ fontFamily: 'var(--font-mono)' }}>{socInicial}%</span>
               </div>
               <input
                 id="input-bateria"
@@ -210,12 +254,16 @@ export default function PlanningForm({ onResult }) {
                 value={socInicial}
                 onChange={(e) => setSocInicial(Number(e.target.value))}
                 style={{
-                  background: `linear-gradient(to right, #00d4ff ${socInicial}%, rgba(15, 22, 40, 0.9) ${socInicial}%)`,
+                  background: `linear-gradient(to right, ${socInicial < 20 ? '#ef4444' : '#00d4ff'} ${socInicial}%, rgba(15, 22, 40, 0.9) ${socInicial}%)`,
                 }}
               />
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span className="form-helper">0%</span>
-                <span className="form-helper">100%</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', marginTop: 4 }}>
+                <span style={{ color: '#ef4444', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                  <ShieldAlert size={11} /> 15% Reserva Mínima
+                </span>
+                <span>50%</span>
+                <span style={{ color: '#00d4ff' }}>80% Carga Rápida</span>
+                <span>100%</span>
               </div>
             </div>
           </div>
@@ -227,14 +275,17 @@ export default function PlanningForm({ onResult }) {
               type="submit"
               className="btn btn--primary btn--full"
               disabled={cargando || loadingCatalogos}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
             >
               {cargando ? (
                 <>
                   <span className="spinner" aria-hidden="true"></span>
-                  Calculando ruta...
+                  Calculando estrategia de ruta...
                 </>
               ) : (
-                <>⚡ Calcular Ruta</>
+                <>
+                  <Zap size={16} /> Calcular Ruta y Paradas
+                </>
               )}
             </button>
           </div>

@@ -2,18 +2,60 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-function markerHtml(kind, label) {
-  const icon = kind === 'stop' ? '⚡' : kind === 'origin' ? 'A' : 'B';
-  return `<span class="route-map-marker route-map-marker--${kind}" aria-label="${escapeHtml(label)}">${icon}</span>`;
-}
-
 function escapeHtml(value) {
   return String(value).replace(/[&<>'"]/g, (character) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;',
   }[character]));
 }
 
-/** Mapa Leaflet del trazado devuelto por POST /api/routes/plan. */
+function markerHtml(kind, label) {
+  if (kind === 'stop') {
+    return `
+      <div style="
+        background: #0d1e17;
+        border: 2px solid #10b981;
+        color: #10b981;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        font-weight: 700;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.7), 0 0 10px rgba(16, 185, 129, 0.4);
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        white-space: nowrap;
+      ">
+        <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981;"></span>
+        <span>⚡ ${escapeHtml(label)}</span>
+      </div>
+    `;
+  }
+
+  const isOrigin = kind === 'origin';
+  return `
+    <div style="
+      background: ${isOrigin ? '#081c24' : '#1c0f24'};
+      border: 2px solid ${isOrigin ? '#00d4ff' : '#a855f7'};
+      color: #fff;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    ">
+      <span>${isOrigin ? '📍' : '🏁'}</span>
+      <span>${escapeHtml(label)}</span>
+    </div>
+  `;
+}
+
+/** Mapa Leaflet del trazado devuelto por POST /api/routes/plan con trazado animado y pines modernos */
 export default function RouteMap({ geometry, origen, destino, paradas = [] }) {
   const elementRef = useRef(null);
   const [loadError, setLoadError] = useState(false);
@@ -26,30 +68,61 @@ export default function RouteMap({ geometry, origen, destino, paradas = [] }) {
 
     setLoadError(false);
     const map = L.map(elementRef.current, { scrollWheelZoom: false, attributionControl: true });
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+
+    // Modern clean tiles (CartoDB Voyager)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors',
+      attribution: '&copy; OpenStreetMap &copy; CARTO',
     }).addTo(map);
 
-    const route = L.geoJSON(geometry, {
-      style: { color: '#00d4ff', weight: 5, opacity: 0.9 },
+    // Glow background line
+    L.geoJSON(geometry, {
+      style: { color: '#00d4ff', weight: 12, opacity: 0.25 },
     }).addTo(map);
+
+    // Main route line with animated dash pulse
+    const route = L.geoJSON(geometry, {
+      style: {
+        color: '#00d4ff',
+        weight: 5,
+        opacity: 0.95,
+        className: 'route-polyline-animated',
+      },
+    }).addTo(map);
+
     const icon = (kind, label) => L.divIcon({
-      className: 'route-map-icon-wrapper',
+      className: '',
       html: markerHtml(kind, label),
-      iconSize: [32, 32],
-      iconAnchor: [16, 16],
+      iconSize: [120, 28],
+      iconAnchor: [60, 14],
     });
 
-    if (origen) L.marker([origen.latitud, origen.longitud], { icon: icon('origin', origen.nombre) }).bindPopup(`<strong>Origen</strong><br>${escapeHtml(origen.nombre)}`).addTo(map);
-    if (destino) L.marker([destino.latitud, destino.longitud], { icon: icon('destination', destino.nombre) }).bindPopup(`<strong>Destino</strong><br>${escapeHtml(destino.nombre)}`).addTo(map);
+    if (origen) {
+      L.marker([origen.latitud, origen.longitud], { icon: icon('origin', origen.nombre) })
+        .bindPopup(`<strong>Origen</strong><br>${escapeHtml(origen.nombre)}`)
+        .addTo(map);
+    }
+
+    if (destino) {
+      L.marker([destino.latitud, destino.longitud], { icon: icon('destination', destino.nombre) })
+        .bindPopup(`<strong>Destino</strong><br>${escapeHtml(destino.nombre)}`)
+        .addTo(map);
+    }
+
     paradas.forEach((parada) => {
       L.marker([parada.latitud, parada.longitud], { icon: icon('stop', parada.estacionNombre) })
-        .bindPopup(`<strong>${escapeHtml(parada.estacionNombre)}</strong><br>${escapeHtml(parada.ciudad)} · ${parada.socLlegada}% → ${parada.socSalida}%`)
+        .bindPopup(`
+          <div style="font-family: sans-serif; font-size: 12px;">
+            <strong>${escapeHtml(parada.estacionNombre)}</strong><br/>
+            ${escapeHtml(parada.ciudad)} · ${escapeHtml(parada.operador)}<br/>
+            Carga: <strong>${parada.socLlegada.toFixed(0)}% → ${parada.socSalida.toFixed(0)}%</strong> (${parada.tiempoCarga_min} min)
+          </div>
+        `)
         .addTo(map);
     });
 
-    map.fitBounds(route.getBounds(), { padding: [30, 30], maxZoom: 10 });
+    map.fitBounds(route.getBounds(), { padding: [50, 50], maxZoom: 11 });
+
     return () => {
       map.remove();
     };
