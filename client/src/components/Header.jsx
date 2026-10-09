@@ -1,6 +1,8 @@
+// Header.jsx
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Compass, Zap, User, Sliders, LogOut, ShieldCheck } from 'lucide-react';
+import { useTheme } from './hooks/useTheme';
+import { Compass, Zap, User, Sliders, LogOut, ShieldCheck, Sun, Moon } from 'lucide-react';
 
 const TABS = [
   { id: 'planificar', label: 'Planificar', icon: Compass },
@@ -11,6 +13,7 @@ const TABS = [
 
 export default function Header({ vista, onNavigate, onOpenAuth }) {
   const { usuario, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const tabs = TABS.filter((tab) => {
     if (tab.requiresAdmin) return usuario?.rol === 'admin';
@@ -39,6 +42,15 @@ export default function Header({ vista, onNavigate, onOpenAuth }) {
         </div>
 
         <div className="header__user">
+          <button 
+            type="button" 
+            className="btn btn--ghost btn--small theme-toggle" 
+            onClick={toggleTheme} 
+            aria-label={ theme === 'dark' ? 'Activar modo diurno' : 'Activar modo nocturno' } 
+            title={ theme === 'dark' ? 'Activar modo diurno' : 'Activar modo nocturno' } 
+          > 
+            {theme === 'dark' ? ( <Sun size={14} />) : ( <Moon size={14} /> )} 
+          </button>
           {usuario ? (
             <>
               <span className="user-chip" title={usuario.email}>
