@@ -101,3 +101,26 @@ test('declara cobertura insuficiente cuando ningún cargador permite el siguient
   assert.equal(result.code, 'INSUFFICIENT_COVERAGE');
   assert.match(result.error, /cobertura compatible/i);
 });
+
+test('RF17, RF10 & RN06: conserva metadatos de fuente, fecha y maneja tarifa desconocida como costo parcial', async () => {
+  const customStation = {
+    ...station({ longitude: 0.5 }),
+    fuente: 'SEC EcoCarga Oficial',
+    fechaActualizacion: '2026-10-05',
+    tarifa_CLPporKWh: null,
+  };
+  const service = createRoutePlanningService({
+    providers: providerFixture(),
+    vehicles: [vehicle],
+    stations: [customStation],
+  });
+  const result = await service.plan({ origin: 'Origen', destination: 'Destino', vehiculoId: 'test-ev', socInicial: 40 });
+
+  assert.equal(result.exito, true);
+  assert.equal(result.paradas[0].fuente, 'SEC EcoCarga Oficial');
+  assert.equal(result.paradas[0].fechaActualizacion, '2026-10-05');
+  assert.equal(result.paradas[0].costo_CLP, null);
+  assert.equal(result.resumen.costoIncompleto, true);
+  assert.ok(result.advertencias.some((w) => /tarifa informada/i.test(w)));
+});
+
