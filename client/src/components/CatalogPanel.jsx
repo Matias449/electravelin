@@ -7,6 +7,38 @@ import { Search, Car, Zap, Star, Filter, ShieldCheck, MapPin, ExternalLink } fro
 
 const CONECTORES = ['', 'CCS2', 'CHAdeMO'];
 
+const ETIQUETAS_ESTADO = {
+  DISPONIBLE: 'disponibles',
+  OCUPADO: 'ocupados',
+  'NO DISPONIBLE': 'no disponibles',
+  'FUERA DE LINEA': 'fuera de línea',
+  'SIN ESTADO': 'sin estado',
+};
+
+function resumirEquipos(cargadores = []) {
+  const grupos = new Map();
+  cargadores.forEach((cargador) => {
+    const marca = cargador.marca || 'Marca no informada';
+    const modelo = cargador.modelo || 'Modelo no informado';
+    const potencia = cargador.potenciaMaxima_kW ?? null;
+    const key = [marca, modelo, potencia ?? 'sin-potencia'].join('|');
+    const grupo = grupos.get(key) || { marca, modelo, potencia, total: 0, estados: {} };
+    grupo.total += 1;
+    const estado = String(cargador.estado || 'SIN ESTADO').toUpperCase();
+    grupo.estados[estado] = (grupo.estados[estado] || 0) + 1;
+    grupos.set(key, grupo);
+  });
+  return [...grupos.values()];
+}
+
+function textoResumenEquipo(grupo) {
+  const potencia = grupo.potencia ? `${grupo.potencia} kW` : 'potencia no informada';
+  const estados = Object.entries(grupo.estados)
+    .map(([estado, cantidad]) => `${cantidad} ${ETIQUETAS_ESTADO[estado] || estado.toLowerCase()}`)
+    .join(' · ');
+  return `${grupo.total} ${grupo.total === 1 ? 'equipo' : 'equipos'} ${grupo.marca} ${grupo.modelo} · ${potencia}${estados ? ` · ${estados}` : ''}`;
+}
+
 export default function CatalogPanel({ onRequireAuth }) {
   const { usuario } = useAuth();
   const [tipo, setTipo] = useState('vehiculos');
@@ -217,6 +249,7 @@ export default function CatalogPanel({ onRequireAuth }) {
             <ul className="list">
               {estaciones.map((station) => {
                 const fav = esFavorito(station.id, 'estacion');
+                const equiposAgrupados = resumirEquipos(station.cargadores);
                 return (
                   // <li key={station.id} className="list__item">
                   <li key={station.id} 
@@ -254,8 +287,17 @@ export default function CatalogPanel({ onRequireAuth }) {
                         Estado SEC: <strong>{station.disponibilidad?.estado || 'SIN ESTADO'}</strong> · Disponibles: {station.disponibilidad?.disponibles ?? '—'} · Ocupados: {station.disponibilidad?.ocupados ?? '—'} · Actualizado: {station.actualizadoEn ? new Date(station.actualizadoEn).toLocaleString('es-CL') : 'sin hora'}
                       </div>
                       {station.cargadores?.length > 0 && (
-                        <div className="list__meta" style={{ marginTop: 4 }}>
-                          Equipos: {station.cargadores.map((charger) => `${charger.marca} ${charger.modelo} (${charger.potenciaMaxima_kW || '—'} kW, ${charger.estado})`).join(' · ')}
+                        <div className="list__meta station-equipment-summary" style={{ marginTop: 7 }}>
+                          <strong>Equipos ({station.cargadores.length}):</strong>
+                          <span>{equiposAgrupados.map(textoResumenEquipo).join(' | ')}</span>
+                          {station.cargadores.length > 8 && (
+                            <details>
+                              <summary>Ver detalle de equipos por modelo</summary>
+                              <ul>
+                                {equiposAgrupados.map((grupo) => <li key={`${grupo.marca}-${grupo.modelo}-${grupo.potencia}`}>{textoResumenEquipo(grupo)}</li>)}
+                              </ul>
+                            </details>
+                          )}
                         </div>
                       )}
                       {station.compatibilidad && (

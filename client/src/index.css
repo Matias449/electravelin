@@ -2097,3 +2097,20 @@ a:hover {
   outline: 2px solid #00d4ff;
   outline-offset: 3px;
 }
+
+.station-equipment-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 7px;
+  padding: 8px 10px;
+  border-left: 2px solid rgba(0, 212, 255, 0.45);
+  border-radius: 0 8px 8px 0;
+  background: rgba(0, 212, 255, 0.045);
+  line-height: 1.5;
+}
+
+.station-equipment-summary strong { color: var(--text-primary); }
+.station-equipment-summary details { flex-basis: 100%; margin-top: 3px; }
+.station-equipment-summary summary { color: var(--accent-cyan); cursor: pointer; font-weight: 700; }
+.station-equipment-summary ul { display: grid; gap: 4px; margin: 7px 0 0; padding-left: 18px; }
