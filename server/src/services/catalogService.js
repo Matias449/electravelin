@@ -86,6 +86,11 @@ function validateStationInput(body, { partial = false } = {}) {
       errors.push(`El campo "${field}" no puede estar vacío.`);
     }
   }
+  for (const field of ['direccion', 'fuenteUbicacion', 'urlFuenteUbicacion']) {
+    if (body[field] !== undefined && body[field] !== null && (typeof body[field] !== 'string' || body[field].trim() === '')) {
+      errors.push(`El campo "${field}" debe ser texto no vacío o null.`);
+    }
+  }
   if (body.disponible !== undefined && typeof body.disponible !== 'boolean') {
     errors.push('El campo "disponible" debe ser booleano.');
   }
@@ -115,13 +120,15 @@ function createCatalogService({ store } = {}) {
   }
 
   function listStations(filters = {}) {
-    const { ciudad, operador, conector, potenciaMin, region, incluirNoDisponibles } = filters;
+    const { ciudad, operador, conector, potenciaMin, region, busqueda, incluirNoDisponibles } = filters;
     return store
       .all('stations')
       .filter((station) => incluirNoDisponibles === true || station.disponible !== false)
       .filter((station) => !ciudad || normaliseText(station.ciudad).includes(normaliseText(ciudad)))
       .filter((station) => !region || normaliseText(station.region).includes(normaliseText(region)))
       .filter((station) => !operador || normaliseText(station.operador).includes(normaliseText(operador)))
+      .filter((station) => !busqueda || [station.nombre, station.ciudad, station.region, station.operador, station.direccion]
+        .some((field) => normaliseText(field).includes(normaliseText(busqueda))))
       .filter((station) => !conector || station.conectoresDisponibles?.includes(conector))
       .filter((station) => !potenciaMin || Number(station.potenciaMaxima_kW) >= Number(potenciaMin))
       .sort((a, b) => String(a.ciudad ?? '').localeCompare(String(b.ciudad ?? ''), 'es-CL') || String(a.nombre ?? '').localeCompare(String(b.nombre ?? ''), 'es-CL'));
@@ -181,6 +188,10 @@ function createCatalogService({ store } = {}) {
       ciudad: String(body.ciudad).trim(),
       region: body.region ? String(body.region).trim() : null,
       operador: String(body.operador).trim(),
+      direccion: body.direccion ? String(body.direccion).trim() : null,
+      fuenteUbicacion: body.fuenteUbicacion ? String(body.fuenteUbicacion).trim() : null,
+      urlFuenteUbicacion: body.urlFuenteUbicacion ? String(body.urlFuenteUbicacion).trim() : null,
+      ubicacionVerificada: body.ubicacionVerificada === true,
       latitud: toNumber(body.latitud),
       longitud: toNumber(body.longitud),
       conectoresDisponibles: body.conectoresDisponibles,
@@ -199,7 +210,7 @@ function createCatalogService({ store } = {}) {
     if (errors.length) return { error: { status: 400, mensaje: 'Errores de validación', detalles: errors } };
 
     const patch = {};
-    for (const field of ['nombre', 'ciudad', 'region', 'operador', 'tipoTarifa']) {
+    for (const field of ['nombre', 'ciudad', 'region', 'operador', 'tipoTarifa', 'direccion', 'fuenteUbicacion', 'urlFuenteUbicacion']) {
       if (body[field] !== undefined) patch[field] = body[field] === null ? null : String(body[field]).trim();
     }
     if (body.ciudadId !== undefined) patch.ciudadId = slugify(body.ciudadId);
@@ -209,6 +220,7 @@ function createCatalogService({ store } = {}) {
     if (body.conectoresDisponibles !== undefined) patch.conectoresDisponibles = body.conectoresDisponibles;
     if (body.disponible !== undefined) patch.disponible = body.disponible;
     if (body.verificada !== undefined) patch.verificada = body.verificada;
+    if (body.ubicacionVerificada !== undefined) patch.ubicacionVerificada = body.ubicacionVerificada === true;
     return { station: store.update('stations', id, patch) };
   }
 

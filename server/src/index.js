@@ -20,6 +20,7 @@ const { createRequestContext } = require('./middleware/requestContext');
 const { createRateLimiter } = require('./middleware/rateLimit');
 const { createRoutePlanningService } = require('./services/routePlanningService');
 const { createSecConnectorService } = require('./services/secConnectorService');
+const { createSecPublicCatalogService } = require('./services/secPublicCatalogService');
 const { loadEnvironment } = require('./config/loadEnvironment');
 const seedVehicles = require('./data/vehicles.json');
 const seedStations = require('./data/stations.json');
@@ -57,7 +58,7 @@ function ensureBootstrapAdmin(store, authService, logger) {
   }
 }
 
-function createApp({ routePlanner, store, jwtSecret, logger, rateLimits } = {}) {
+function createApp({ routePlanner, store, jwtSecret, logger, rateLimits, secPublicCatalogService } = {}) {
   const log = logger || createLogger();
   const dataStore = store || createStore({
     filePath: process.env.DATA_FILE || path.resolve(__dirname, '../data/electravelin.json'),
@@ -71,9 +72,10 @@ function createApp({ routePlanner, store, jwtSecret, logger, rateLimits } = {}) 
   const catalogService = createCatalogService({ store: dataStore });
   const accountService = createAccountService({ store: dataStore });
   const secConnectorService = createSecConnectorService({ store: dataStore, logger: log });
+  const liveSecCatalog = secPublicCatalogService || createSecPublicCatalogService();
   const authMiddleware = createAuthMiddleware({ authService });
 
-  const catalogController = createCatalogController({ catalogService, auditService, secConnectorService });
+  const catalogController = createCatalogController({ catalogService, auditService, secConnectorService, secPublicCatalogService: liveSecCatalog });
   const accountController = createAccountController({ authService, accountService, catalogService, auditService });
   const cityController = createCityController();
 

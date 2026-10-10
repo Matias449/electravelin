@@ -2,7 +2,7 @@
  * Controladores del catálogo: consulta pública con filtros y CRUD administrativo.
  * Toda mutación administrativa queda registrada en auditoría.
  */
-function createCatalogController({ catalogService, auditService, secConnectorService }) {
+function createCatalogController({ catalogService, auditService, secConnectorService, secPublicCatalogService }) {
   function record(req, accion, entidad, entidadId, detalle = null) {
     auditService?.record({
       actorId: req.user?.id || null,
@@ -37,8 +37,29 @@ function createCatalogController({ catalogService, auditService, secConnectorSer
     },
 
     listStations(req, res) {
-      const { ciudad, region, operador, conector, potenciaMin } = req.query;
-      return res.json({ exito: true, estaciones: catalogService.listStations({ ciudad, region, operador, conector, potenciaMin }) });
+      const { ciudad, region, operador, conector, potenciaMin, busqueda } = req.query;
+      return res.json({ exito: true, estaciones: catalogService.listStations({ ciudad, region, operador, conector, potenciaMin, busqueda }) });
+    },
+
+    async listLiveSecStations(req, res) {
+      try {
+        const vehicle = req.query.vehiculoId
+          ? catalogService.listVehicles({ incluirInactivos: true }).find((item) => item.id === req.query.vehiculoId)
+          : null;
+        if (req.query.vehiculoId && !vehicle) {
+          return res.status(404).json({ exito: false, code: 'VEHICLE_NOT_FOUND', error: 'Vehículo no encontrado.' });
+        }
+        const stations = await secPublicCatalogService.list({
+          vehicle,
+          busqueda: req.query.busqueda,
+          region: req.query.region,
+          conector: req.query.conector,
+          potenciaMin: req.query.potenciaMin,
+        });
+        return res.json({ exito: true, fuente: 'SEC / Plataforma de Interoperabilidad EcoCarga', estaciones: stations });
+      } catch (error) {
+        return res.status(502).json({ exito: false, code: 'SEC_ECOCARGA_UNAVAILABLE', error: 'No fue posible consultar la red pública SEC en este momento.' });
+      }
     },
 
     adminListVehicles(req, res) {

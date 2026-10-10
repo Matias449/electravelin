@@ -72,6 +72,11 @@ export async function fetchEstaciones(filters = {}) {
   return data.estaciones;
 }
 
+export async function fetchEstacionesSec(filters = {}) {
+  const data = await request(`/estaciones/sec${toQuery(filters)}`);
+  return data.estaciones;
+}
+
 export async function fetchCiudades() {
   const data = await request('/ciudades');
   return data.ciudades;

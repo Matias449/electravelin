@@ -16,6 +16,7 @@ function createRouteRoutes({ routePlanner, catalogController, cityController, lo
   // Catálogo público con filtros (marca, conector, ciudad, operador, potencia).
   router.get('/vehiculos', catalogController.listVehicles);
   router.get('/estaciones', catalogController.listStations);
+  router.get('/estaciones/sec', catalogController.listLiveSecStations);
   router.get('/estaciones/fuente', catalogController.getSecMetadata);
   router.get('/ciudades', cityController.listCities);
 

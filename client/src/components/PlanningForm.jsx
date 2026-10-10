@@ -44,10 +44,6 @@ export default function PlanningForm({ onResult }) {
         setVehiculos(vehiculosData);
         setCiudades(ciudadesData);
 
-        // Preselecciona el primer vehículo si no hay uno seleccionado
-        if (vehiculosData.length > 0 && !vehiculoId) {
-          setVehiculoId(vehiculosData[0].id);
-        }
       } catch (err) {
         if (active) setErrorCatalogos(err.message || 'No se pudo cargar el catálogo.');
       } finally {
@@ -104,7 +100,7 @@ export default function PlanningForm({ onResult }) {
   }
 
   // ─── Obtener info del vehículo seleccionado ───────────────────────────
-  const vehiculoSeleccionado = vehiculos.find((v) => v.id === vehiculoId) || vehiculos[0];
+  const vehiculoSeleccionado = vehiculos.find((v) => v.id === vehiculoId) || null;
 
   // Normalizar datos para el visor 3D
   const activeVehicle3D = vehiculoSeleccionado ? {
@@ -115,8 +111,11 @@ export default function PlanningForm({ onResult }) {
     consumo_medio_kWh_100km: vehiculoSeleccionado.consumoReferencia_kWhPor100km,
     potencia_carga_max_kW: vehiculoSeleccionado.potenciaCargaMaxima_kW,
     conectores: vehiculoSeleccionado.conectoresCompatibles,
-    tieneModelo3D: Boolean(vehiculoSeleccionado.tieneModelo3D || vehiculoSeleccionado.id === 'tesla_model3_lr' || vehiculoSeleccionado.id === 'tesla_modely_lr'),
-    modelo3DUrl: vehiculoSeleccionado.modelo3DUrl || ((vehiculoSeleccionado.id === 'tesla_model3_lr' || vehiculoSeleccionado.id === 'tesla_modely_lr') ? '/models/tesla-model-3.glb' : null),
+    tieneModelo3D: Boolean(vehiculoSeleccionado.tieneModelo3D && vehiculoSeleccionado.modelo3DUrl),
+    modelo3DUrl: vehiculoSeleccionado.modelo3DUrl || null,
+    modelo3DTipo: vehiculoSeleccionado.modelo3DTipo,
+    modelo3DCredito: vehiculoSeleccionado.modelo3DCredito,
+    modelo3DFuenteUrl: vehiculoSeleccionado.modelo3DFuenteUrl,
   } : null;
 
   return (
@@ -131,13 +130,12 @@ export default function PlanningForm({ onResult }) {
         </span>
       </div>
 
-      {/* Visor 3D Interactivo: Carga modelo GLB real si está disponible o ficha 2D */}
-      {activeVehicle3D && (
+      {/* El visor solo aparece después de seleccionar un vehículo con malla 3D disponible. */}
+      {activeVehicle3D?.tieneModelo3D && (
         <Vehicle3DViewer
           vehiculo={activeVehicle3D}
           soc={socInicial}
           isCharging={cargando}
-          onSelectRealModel={(id) => setVehiculoId(id)}
         />
       )}
 
@@ -204,10 +202,11 @@ export default function PlanningForm({ onResult }) {
             >
               <option value="">— Selecciona tu vehículo —</option>
               {vehiculos.map((v) => {
-                const has3D = Boolean(v.tieneModelo3D || v.id === 'tesla_model3_lr' || v.id === 'tesla_modely_lr');
+                const has3D = Boolean(v.tieneModelo3D && v.modelo3DUrl);
+                const modelPrefix = has3D ? '★ [Modelo 3D disponible] ' : '';
                 return (
                   <option key={v.id} value={v.id}>
-                    {has3D ? '★ [3D Real] ' : ''}{v.modelo} — {v.bateriaUtilizable_kWh} kWh | {v.consumoReferencia_kWhPor100km} kWh/100km
+                    {modelPrefix}{v.modelo} — {v.bateriaUtilizable_kWh} kWh | {v.consumoReferencia_kWhPor100km} kWh/100km
                   </option>
                 );
               })}
@@ -220,13 +219,13 @@ export default function PlanningForm({ onResult }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6, flexWrap: 'wrap', gap: 6 }}>
                 <span className="form-helper">
                   Conector: <strong>{vehiculoSeleccionado.conectoresCompatibles?.join(', ')}</strong> · Carga máx: <strong>{vehiculoSeleccionado.potenciaCargaMaxima_kW} kW DC</strong>
-                  {(vehiculoSeleccionado.tieneModelo3D || vehiculoSeleccionado.id?.includes('tesla')) ? (
+                  {vehiculoSeleccionado.tieneModelo3D && vehiculoSeleccionado.modelo3DUrl ? (
                     <span style={{ marginLeft: 8, color: '#10b981', fontWeight: 600, fontSize: '0.72rem' }}>
-                      ● Modelo 3D Activo
+                      ● Modelo 3D disponible
                     </span>
                   ) : (
                     <span style={{ marginLeft: 8, color: '#94a3b8', fontSize: '0.72rem' }}>
-                      ○ Ficha Técnica 2D
+                      ○ No hay modelo 3D verificado para este vehículo
                     </span>
                   )}
                 </span>

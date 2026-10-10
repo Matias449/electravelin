@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import StationsMap from './StationsMap';
 import * as api from '../utils/api';
-import { Search, Car, Zap, Star, Filter, ShieldCheck } from 'lucide-react';
+import { Search, Car, Zap, Star, Filter, ShieldCheck, MapPin, ExternalLink } from 'lucide-react';
 
 const CONECTORES = ['', 'CCS2', 'CHAdeMO'];
 
@@ -17,6 +17,7 @@ export default function CatalogPanel({ onRequireAuth }) {
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
   const [estacionSeleccionada, setEstacionSeleccionada] = useState(null);
+  const [vehiculoId, setVehiculoId] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -26,13 +27,16 @@ export default function CatalogPanel({ onRequireAuth }) {
       try {
         const query = tipo === 'vehiculos'
           ? { marca: filtros.texto, conector: filtros.conector, potenciaMin: filtros.potenciaMin }
-          : { ciudad: filtros.texto, operador: filtros.texto, conector: filtros.conector, potenciaMin: filtros.potenciaMin };
+          : { busqueda: filtros.texto, conector: filtros.conector, potenciaMin: filtros.potenciaMin, vehiculoId };
         if (tipo === 'vehiculos') {
           const data = await api.fetchVehiculos(query);
           if (active) setVehiculos(data);
         } else {
-          const data = await api.fetchEstaciones(query);
-          if (active) setEstaciones(data);
+          const [data, vehicleData] = await Promise.all([api.fetchEstacionesSec(query), api.fetchVehiculos()]);
+          if (active) {
+            setEstaciones(data);
+            setVehiculos(vehicleData);
+          }
         }
         if (usuario) {
           const favoritosData = await api.fetchFavorites();
@@ -48,7 +52,7 @@ export default function CatalogPanel({ onRequireAuth }) {
     }
     const timer = setTimeout(load, 250);
     return () => { active = false; clearTimeout(timer); };
-  }, [tipo, filtros, usuario]);
+  }, [tipo, filtros, usuario, vehiculoId]);
 
   function esFavorito(referenciaId, tipoFavorito) {
     return favoritos.some((favorite) => favorite.referenciaId === referenciaId && favorite.tipo === tipoFavorito);
@@ -81,7 +85,7 @@ export default function CatalogPanel({ onRequireAuth }) {
             <Search size={22} color="#00d4ff" /> Catálogo Técnico
           </h2>
           <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
-            SEC CHILE · RED RUTA 5
+            SEC · RED PÚBLICA EN VIVO
           </span>
         </div>
 
@@ -111,7 +115,7 @@ export default function CatalogPanel({ onRequireAuth }) {
         <div className="filter-bar">
           <input
             className="form-input"
-            placeholder={tipo === 'vehiculos' ? 'Buscar por marca o modelo…' : 'Buscar por ciudad u operador…'}
+            placeholder={tipo === 'vehiculos' ? 'Buscar por marca o modelo…' : 'Dirección, comuna, región u operador…'}
             value={filtros.texto}
             onChange={(event) => setFiltros({ ...filtros, texto: event.target.value })}
             aria-label="Texto de búsqueda"
@@ -128,6 +132,12 @@ export default function CatalogPanel({ onRequireAuth }) {
             <option value="100">100+ kW (Ultra-rápida)</option>
             <option value="150">150+ kW (High Power)</option>
           </select>
+          {tipo === 'estaciones' && (
+            <select className="form-select" value={vehiculoId} onChange={(event) => setVehiculoId(event.target.value)} aria-label="Vehículo para comprobar compatibilidad">
+              <option value="">Comprobar compatibilidad con vehículo…</option>
+              {vehiculos.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.marca} {vehicle.modelo}</option>)}
+            </select>
+          )}
         </div>
 
         {error && <div className="error-banner error-banner--compact" role="alert">{error}</div>}
@@ -137,6 +147,7 @@ export default function CatalogPanel({ onRequireAuth }) {
           <ul className="list">
             {vehiculos.map((vehicle) => {
               const fav = esFavorito(vehicle.id, 'vehiculo');
+              const modeloReferencial = vehicle.modelo3DTipo === 'referencial';
               return (
                 <li key={vehicle.id} className="list__item">
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -154,7 +165,7 @@ export default function CatalogPanel({ onRequireAuth }) {
                           padding: '2px 6px',
                           borderRadius: 4
                         }}>
-                          ★ 3D REAL (GLB)
+                          ★ {modeloReferencial ? '3D REFERENCIAL' : 'MODELO 3D (GLB)'}
                         </span>
                       ) : (
                         <span style={{
@@ -219,13 +230,39 @@ export default function CatalogPanel({ onRequireAuth }) {
                         {station.nombre}
                       </strong>
                       <div className="list__meta" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.76rem', marginTop: 4 }}>
-                        {station.ciudad}{station.region ? ` · ${station.region}` : ''} · <span style={{ color: '#00d4ff' }}>{station.operador}</span> · <strong>{station.potenciaMaxima_kW} kW</strong> · {station.conectoresDisponibles.join(', ')} · ${station.tarifa_CLPporKWh}/kWh
+                        {station.comuna || station.ciudad}{station.region ? ` · ${station.region}` : ''} · <span style={{ color: '#00d4ff' }}>{station.operador}</span> · <strong>{station.potenciaMaxima_kW || '—'} kW</strong> · {station.conectoresDisponibles.join(', ')}
                         {station.verificada && (
                           <span className="badge badge--verified" style={{ marginLeft: 6, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                             <ShieldCheck size={11} /> SEC
                           </span>
                         )}
                       </div>
+                      {station.direccion ? (
+                        <div className="list__meta" style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 6 }}>
+                          <MapPin size={13} color="#10b981" aria-hidden="true" />
+                          <span><strong>Dirección:</strong> {station.direccion}</span>
+                          {(station.urlFuente || station.urlFuenteUbicacion) && (
+                            <a href={station.urlFuente || station.urlFuenteUbicacion} target="_blank" rel="noreferrer" title={`Ver fuente: ${station.fuente || station.fuenteUbicacion || 'SEC'}`} aria-label={`Ver fuente de la dirección de ${station.nombre}`}>
+                              <ExternalLink size={12} aria-hidden="true" />
+                            </a>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="list__meta" style={{ marginTop: 6 }}>Dirección específica pendiente de verificación.</div>
+                      )}
+                      <div className="list__meta" style={{ marginTop: 4 }}>
+                        Estado SEC: <strong>{station.disponibilidad?.estado || 'SIN ESTADO'}</strong> · Disponibles: {station.disponibilidad?.disponibles ?? '—'} · Ocupados: {station.disponibilidad?.ocupados ?? '—'} · Actualizado: {station.actualizadoEn ? new Date(station.actualizadoEn).toLocaleString('es-CL') : 'sin hora'}
+                      </div>
+                      {station.cargadores?.length > 0 && (
+                        <div className="list__meta" style={{ marginTop: 4 }}>
+                          Equipos: {station.cargadores.map((charger) => `${charger.marca} ${charger.modelo} (${charger.potenciaMaxima_kW || '—'} kW, ${charger.estado})`).join(' · ')}
+                        </div>
+                      )}
+                      {station.compatibilidad && (
+                        <div className="list__meta" style={{ marginTop: 4, color: station.compatibilidad.compatible ? '#10b981' : '#f87171' }}>
+                          {station.compatibilidad.compatible ? `Compatible: ${station.compatibilidad.conectoresCompatibles.join(', ')}` : 'No compatible con el vehículo seleccionado'}
+                        </div>
+                      )}
                     </div>
                     <button
                       type="button"
