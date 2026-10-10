@@ -1,5 +1,7 @@
+// CatalogPanel.jsx
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import StationsMap from './StationsMap';
 import * as api from '../utils/api';
 import { Search, Car, Zap, Star, Filter, ShieldCheck } from 'lucide-react';
 
@@ -14,6 +16,7 @@ export default function CatalogPanel({ onRequireAuth }) {
   const [favoritos, setFavoritos] = useState([]);
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
+  const [estacionSeleccionada, setEstacionSeleccionada] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -130,7 +133,7 @@ export default function CatalogPanel({ onRequireAuth }) {
         {error && <div className="error-banner error-banner--compact" role="alert">{error}</div>}
         {cargando && <p className="form-helper">Consultando base de datos oficial…</p>}
 
-        {tipo === 'vehiculos' ? (
+        {tipo === 'vehiculos' && (
           <ul className="list">
             {vehiculos.map((vehicle) => {
               const fav = esFavorito(vehicle.id, 'vehiculo');
@@ -184,39 +187,59 @@ export default function CatalogPanel({ onRequireAuth }) {
             })}
             {!cargando && vehiculos.length === 0 && <li className="list__empty">Sin resultados con esos filtros.</li>}
           </ul>
-        ) : (
-          <ul className="list">
-            {estaciones.map((station) => {
-              const fav = esFavorito(station.id, 'estacion');
-              return (
-                <li key={station.id} className="list__item">
-                  <div>
-                    <strong style={{ fontFamily: 'var(--font-heading)', fontSize: '1rem', color: '#fff' }}>
-                      {station.nombre}
-                    </strong>
-                    <div className="list__meta" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.76rem', marginTop: 4 }}>
-                      {station.ciudad}{station.region ? ` · ${station.region}` : ''} · <span style={{ color: '#00d4ff' }}>{station.operador}</span> · <strong>{station.potenciaMaxima_kW} kW</strong> · {station.conectoresDisponibles.join(', ')} · ${station.tarifa_CLPporKWh}/kWh
-                      {station.verificada && (
-                        <span className="badge badge--verified" style={{ marginLeft: 6, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                          <ShieldCheck size={11} /> SEC
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className={`btn btn--small ${fav ? 'btn--ghost' : 'btn--primary'}`}
-                    onClick={() => toggleFavorito('estacion', station.id)}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}
+        )}
+
+        {tipo === 'estaciones' && (
+          <div className="stations-explorer">
+            <section className="stations-explorer__map">
+              <StationsMap
+                estaciones={estaciones}
+                seleccionada={estacionSeleccionada}
+                onSelect={setEstacionSeleccionada}
+              />
+            </section>
+            <ul className="list">
+              {estaciones.map((station) => {
+                const fav = esFavorito(station.id, 'estacion');
+                return (
+                  // <li key={station.id} className="list__item">
+                  <li key={station.id} 
+                    className={`list__item station-list-item ${
+                      String(estacionSeleccionada?.id) === String(station.id) ? 'station-list-item--selected' : ''
+                    }`}
+                    onClick={() => setEstacionSeleccionada(station)}
                   >
-                    <Star size={13} fill={fav ? '#f59e0b' : 'none'} color={fav ? '#f59e0b' : 'currentColor'} />
-                    {fav ? 'Favorito' : 'Guardar'}
-                  </button>
-                </li>
-              );
-            })}
-            {!cargando && estaciones.length === 0 && <li className="list__empty">Sin resultados con esos filtros.</li>}
-          </ul>
+                    <div>
+                      <strong style={{ fontFamily: 'var(--font-heading)', fontSize: '1rem', color: '#fff' }}>
+                        {station.nombre}
+                      </strong>
+                      <div className="list__meta" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.76rem', marginTop: 4 }}>
+                        {station.ciudad}{station.region ? ` · ${station.region}` : ''} · <span style={{ color: '#00d4ff' }}>{station.operador}</span> · <strong>{station.potenciaMaxima_kW} kW</strong> · {station.conectoresDisponibles.join(', ')} · ${station.tarifa_CLPporKWh}/kWh
+                        {station.verificada && (
+                          <span className="badge badge--verified" style={{ marginLeft: 6, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                            <ShieldCheck size={11} /> SEC
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className={`btn btn--small ${fav ? 'btn--ghost' : 'btn--primary'}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        toggleFavorito('estacion', station.id);
+                      }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                    >
+                      <Star size={13} fill={fav ? '#f59e0b' : 'none'} color={fav ? '#f59e0b' : 'currentColor'} />
+                      {fav ? 'Favorito' : 'Guardar'}
+                    </button>
+                  </li>
+                );
+              })}
+              {!cargando && estaciones.length === 0 && <li className="list__empty">Sin resultados con esos filtros.</li>}
+            </ul>
+          </div>
         )}
       </div>
     </section>

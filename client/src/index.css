@@ -1727,3 +1727,112 @@ a:hover {
       var(--bg-primary) 100%
     );
 }
+/*  */
+
+.stations-explorer {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.5fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.stations-explorer__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.station-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid var(--border-color, #334155);
+  border-radius: 12px;
+  background: var(--surface, #111827);
+  color: var(--text-primary, #fff);
+  text-align: left;
+  cursor: pointer;
+}
+
+.station-card:hover,
+.station-card--active {
+  border-color: #00d4ff;
+  background: rgba(0, 212, 255, 0.07);
+}
+
+.station-card span {
+  color: var(--text-secondary, #94a3b8);
+  font-size: 0.85rem;
+}
+
+.stations-explorer__map {
+  position: sticky;
+  top: 1rem;
+  min-width: 0;
+}
+
+.stations-map {
+  height: min(72vh, 720px);
+  min-height: 400px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--border-color, #334155);
+}
+
+.station-details {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border-color, #334155);
+  border-radius: 12px;
+}
+
+@media (max-width: 800px) {
+  .stations-explorer {
+    grid-template-columns: 1fr;
+  }
+
+  .stations-explorer__map {
+    position: static;
+    grid-row: 1;
+  }
+
+  .stations-map {
+    height: 50vh;
+    min-height: 320px;
+  }
+}
+
+
+.station-list-item {
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.station-list-item:hover {
+  border-color: rgba(0, 212, 255, 0.45);
+  background: rgba(0, 212, 255, 0.04);
+}
+
+.station-list-item--selected {
+  border-color: #00d4ff;
+  background: rgba(0, 212, 255, 0.12);
+  box-shadow: inset 4px 0 0 #00d4ff;
+}
+
+.station-list-item--selected strong {
+  color: #00d4ff !important;
+}
+
+.station-list-item:focus-visible {
+  outline: 2px solid #00d4ff;
+  outline-offset: 3px;
+}
