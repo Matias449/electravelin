@@ -179,7 +179,12 @@ export default function CatalogPanel({ onRequireAuth }) {
                     onClick={() => toggleFavorito('vehiculo', vehicle.id)}
                     style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}
                   >
-                    <Star size={13} fill={fav ? '#f59e0b' : 'none'} color={fav ? '#f59e0b' : 'currentColor'} />
+                    <Star
+                        size={13} width={13} height={13} strokeWidth={2}
+                        fill={fav ? '#f59e0b' : 'none'}
+                        color={fav ? '#f59e0b' : 'currentColor'}
+                        style={{ display: 'block', flex: '0 0 13px', minWidth: '13px', minHeight: '13px', visibility: 'visible'}}
+                      />
                     {fav ? 'Favorito' : 'Guardar'}
                   </button>
                 </li>
@@ -231,7 +236,12 @@ export default function CatalogPanel({ onRequireAuth }) {
                       }}
                       style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}
                     >
-                      <Star size={13} fill={fav ? '#f59e0b' : 'none'} color={fav ? '#f59e0b' : 'currentColor'} />
+                      <Star
+                        size={13} width={13} height={13} strokeWidth={2}
+                        fill={fav ? '#f59e0b' : 'none'}
+                        color={fav ? '#f59e0b' : 'currentColor'}
+                        style={{ display: 'block', flex: '0 0 13px', minWidth: '13px', minHeight: '13px', visibility: 'visible'}}
+                      />
                       {fav ? 'Favorito' : 'Guardar'}
                     </button>
                   </li>
