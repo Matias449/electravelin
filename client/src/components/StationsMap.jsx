@@ -93,7 +93,7 @@ export default function StationsMap({
         icon: crearIconoSeleccionado(activo),
         zIndexOffset: activo ? 1000 : 0,
       });
-      // marker.bindTooltip(estacion.nombre || 'Electrolinera');
+      marker.bindTooltip(estacion.nombre || 'Electrolinera');
       marker.on('click', () => {
         onSelectRef.current?.(estacion);
       });
