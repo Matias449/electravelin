@@ -1753,7 +1753,7 @@ a:hover {
   border: 1px solid var(--border-color, #334155);
   border-radius: 12px;
   background: var(--surface, #111827);
-  color: var(--text-primary, #fff);
+  color: var(--text-primary, #ffffff);
   text-align: left;
   cursor: pointer;
 }
@@ -1835,4 +1835,27 @@ a:hover {
 .station-list-item:focus-visible {
   outline: 2px solid #00d4ff;
   outline-offset: 3px;
+}
+
+.station-list-item__name {
+  color: var(--text-primary);
+}
+
+.station-list-item__meta {
+  color: var(--text-secondary);
+}
+
+[data-theme="light"] .station-list-item__name {
+  color: #475569;
+}
+
+[data-theme="light"] .station-list-item__meta {
+  color: #475569;
+}
+
+.station-list-scroll {
+  max-height: 500px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 6px;
 }

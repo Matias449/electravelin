@@ -88,15 +88,12 @@ export default function StationsMap({
           Math.abs(lat) > 90 ||
           Math.abs(lng) > 180) return;
 
-      // const marker = L.marker([lat, lng]);
       const activo = String(seleccionada?.id) === String(estacion.id);
       const marker = L.marker([lat, lng], {
         icon: crearIconoSeleccionado(activo),
         zIndexOffset: activo ? 1000 : 0,
       });
-
-      marker.bindTooltip(estacion.nombre || 'Electrolinera');
-
+      // marker.bindTooltip(estacion.nombre || 'Electrolinera');
       marker.on('click', () => {
         onSelectRef.current?.(estacion);
       });
