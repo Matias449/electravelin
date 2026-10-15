@@ -86,11 +86,13 @@ function formatStation(station, extra = {}) {
     socSalida: ROUND(extra.socSalida),
     energiaCargada_kWh: extra.recarga?.energiaCargada_kWh,
     tiempoCarga_min: extra.recarga?.tiempoCarga_min,
-    costo_CLP: extra.recarga?.costo_CLP,
+    costo_CLP: extra.recarga?.costo_CLP ?? null,
     latitud: station.latitud,
     longitud: station.longitud,
     distanciaAlTrazado_km: ROUND(extra.distanciaAlTrazadoKm ?? station.route?.distanceKm ?? station.distanceFromOriginKm ?? 0),
     esCargaInicial: Boolean(extra.esCargaInicial),
+    fuente: station.fuente || 'SEC EcoCarga',
+    fechaActualizacion: station.fechaActualizacion || station.ultimaActualizacion || station.fechaRevision || '02/10/2026',
   };
 }
 
@@ -104,6 +106,7 @@ function calculateChargingPlan({ vehicle, stations, originStations = [], totalDi
   let soc = socInicial;
   let chargingMinutes = 0;
   let totalCost = 0;
+  let hasTariffMissing = false;
 
   while (true) {
     const remainingKm = totalDistanceKm - progressKm;
@@ -152,9 +155,16 @@ function calculateChargingPlan({ vehicle, stations, originStations = [], totalDi
               }),
             });
             chargingMinutes += recarga.tiempoCarga_min;
-            totalCost += recarga.costo_CLP;
+            if (recarga.costo_CLP != null) {
+              totalCost += recarga.costo_CLP;
+            } else {
+              hasTariffMissing = true;
+            }
             soc = Math.min(100, socSalida);
             warnings.push(`Batería inicial insuficiente: se agregó una carga de salida en ${originStation.nombre}.`);
+            if (socSalida > 80) {
+              warnings.push(`En la carga de salida de ${originStation.nombre} se proyecta recargar hasta ${Math.round(socSalida)}%: sobre el 80% la velocidad de carga disminuye por protección de la batería (RN04).`);
+            }
             continue;
           }
         }
@@ -217,9 +227,20 @@ function calculateChargingPlan({ vehicle, stations, originStations = [], totalDi
       }),
     });
     chargingMinutes += recarga.tiempoCarga_min;
-    totalCost += recarga.costo_CLP;
+    if (recarga.costo_CLP != null) {
+      totalCost += recarga.costo_CLP;
+    } else {
+      hasTariffMissing = true;
+    }
+    if (socSalida > 80) {
+      warnings.push(`En ${stop.nombre} se proyecta recargar hasta ${Math.round(socSalida)}%: sobre el 80% la velocidad de carga disminuye por protección de la batería (RN04).`);
+    }
     progressKm = stop.route.progressKm;
     soc = Math.min(100, socSalida);
+  }
+
+  if (hasTariffMissing) {
+    warnings.push('Una o más paradas no cuentan con tarifa informada; el costo presentado es una estimación parcial.');
   }
 
   return {
@@ -232,6 +253,7 @@ function calculateChargingPlan({ vehicle, stations, originStations = [], totalDi
       tiempoCargaTotal_min: chargingMinutes,
       tiempoTotalViaje_min: Math.round(drivingMinutes) + chargingMinutes,
       costoTotal_CLP: totalCost,
+      costoIncompleto: hasTariffMissing,
       socFinal: ROUND(soc),
       cantidadParadas: stops.length,
       vehiculoUsado: vehicle.modelo,

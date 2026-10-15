@@ -773,6 +773,46 @@ a:hover {
   color: var(--warning);
 }
 
+.stop-card--highlighted {
+  border-color: var(--accent-cyan) !important;
+  background: rgba(0, 212, 255, 0.09) !important;
+  box-shadow: 0 0 25px rgba(0, 212, 255, 0.35), 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+  transform: translateX(6px);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.stop-card__provenance {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.route-map-custom-div-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: rgba(10, 16, 28, 0.95) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(0, 212, 255, 0.3) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 20px rgba(0, 212, 255, 0.15) !important;
+  color: #e2e8f0 !important;
+}
+
+.leaflet-popup-tip {
+  background: rgba(10, 16, 28, 0.95) !important;
+  border: 1px solid rgba(0, 212, 255, 0.3) !important;
+}
+
 /* ─── Badges (conectores) ───────────────────────────────────────────────────── */
 .badge {
   display: inline-flex;

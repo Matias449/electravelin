@@ -82,8 +82,10 @@ function calcularRecarga(
   // (RN05) Tiempo de carga en minutos
   const tiempoCarga_min = (energiaCargada_kWh / potenciaEfectiva_kW) * 60;
 
-  // (RN06) Costo de la recarga
-  const costo_CLP = Math.round(energiaCargada_kWh * tarifa_CLPporKWh);
+  // (RN06) Costo de la recarga: si la tarifa no está disponible o no es finita, se conserva como null (RF08, RN06)
+  const costo_CLP = tarifa_CLPporKWh != null && Number.isFinite(tarifa_CLPporKWh)
+    ? Math.round(energiaCargada_kWh * tarifa_CLPporKWh)
+    : null;
 
   return {
     energiaCargada_kWh: Math.round(energiaCargada_kWh * 100) / 100,
@@ -234,10 +236,14 @@ function calcularRutaOptima(vehiculo, tramos, estaciones, socInicial) {
           costo_CLP: recarga.costo_CLP,
           latitud: estacion.latitud,
           longitud: estacion.longitud,
+          fuente: estacion.fuente || 'SEC / EcoCarga',
+          fechaActualizacion: estacion.fechaActualizacion || '2026-10-02',
         });
 
         tiempoCargaTotal_min += recarga.tiempoCarga_min;
-        costoTotal_CLP += recarga.costo_CLP;
+        if (recarga.costo_CLP != null) {
+          costoTotal_CLP += recarga.costo_CLP;
+        }
 
         // Actualizar SoC después de cargar
         socActual = socObjetivo;
