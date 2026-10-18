@@ -1,3 +1,4 @@
+// catalogService.js
 const CONECTORES_VALIDOS = ['CCS2', 'CHAdeMO', 'Type 2'];
 
 function normaliseText(value) {

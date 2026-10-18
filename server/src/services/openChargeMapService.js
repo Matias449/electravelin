@@ -1,6 +1,6 @@
 // openChargeMapService.js
-const BASE_URL = process.env.OPEN_CHARGE_MAP_BASE_URL || 'https://api.openchargemap.io/v3/poi';
-const API_KEY = process.env.OPEN_CHARGE_MAP_API_KEY;
+// const BASE_URL = process.env.OPEN_CHARGE_MAP_BASE_URL || 'https://api.openchargemap.io/v3/poi';
+// const API_KEY = process.env.OPEN_CHARGE_MAP_API_KEY;
 
 const REQUEST_TIMEOUT_MS = 15000;
 const ROUTE_SAMPLE_KM = 40;
@@ -8,10 +8,16 @@ const SEARCH_RADIUS_KM = 35;
 const ROUTE_BATCH_SIZE = 5;
 const UNKNOWN_OPERATOR = '(Unknown Operator)';
 
+function getConfig() {
+  return {
+    baseUrl: process.env.OPEN_CHARGE_MAP_BASE_URL || 'https://api.openchargemap.io/v3/poi',
+    apiKey: process.env.OPEN_CHARGE_MAP_API_KEY,
+  };
+}
+
 function mapConnector(title = '') {
   const value = String(title).toLowerCase();
 
-  // CCS1 debe evaluarse antes que CCS2: "CCS (Type 1)" también contiene "ccs".
   if (value.includes('ccs') && value.includes('type 1')) return 'CCS1';
   if (value.includes('ccs') || value.includes('combo')) return 'CCS2';
   if (value.includes('chademo')) return 'CHAdeMO';
@@ -80,14 +86,15 @@ function isComplete(station) {
   );
 }
 
-// Función común para consultar la API y normalizar resultados.
 async function requestStations(extraParams, { onlyComplete = true } = {}) {
-  if (!API_KEY) {
+  const { baseUrl, apiKey } = getConfig();
+
+  if (!apiKey) {
     throw new Error('Falta configurar OPEN_CHARGE_MAP_API_KEY en el .env');
   }
 
   const params = new URLSearchParams({
-    key: API_KEY,
+    key: apiKey,
     output: 'json',
     countrycode: 'CL',
     // compact=false: necesitamos ConnectionType.Title, OperatorInfo y StatusType
@@ -97,7 +104,7 @@ async function requestStations(extraParams, { onlyComplete = true } = {}) {
     ...extraParams,
   });
 
-  const response = await fetch(`${BASE_URL}?${params}`, {
+  const response = await fetch(`${baseUrl}?${params}`, {
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
 

@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs');
 const createRouteRoutes = require('./routes/routeRoutes');
 const { createAuthRoutes } = require('./routes/authRoutes');
 const { createAccountRoutes } = require('./routes/accountRoutes');
@@ -22,10 +23,15 @@ const { createRateLimiter } = require('./middleware/rateLimit');
 const { createRoutePlanningService } = require('./services/routePlanningService');
 const { createSecConnectorService } = require('./services/secConnectorService');
 const { loadEnvironment } = require('./config/loadEnvironment');
+const { loadSeedStations } = require('./services/stationSeed');
 const seedVehicles = require('./data/vehicles.json');
 const seedStations = require('./data/stations.json');
 
 const VERSION = '2.0.0-mvp';
+
+function resolveDataFile() {
+  return process.env.DATA_FILE || path.resolve(__dirname, '../data/electravelin.json');
+}
 
 function resolveJwtSecret(logger) {
   if (process.env.JWT_SECRET) return process.env.JWT_SECRET;
@@ -58,11 +64,11 @@ function ensureBootstrapAdmin(store, authService, logger) {
   }
 }
 
-function createApp({ routePlanner, store, jwtSecret, logger, rateLimits } = {}) {
+function createApp({ routePlanner, store, jwtSecret, logger, rateLimits, stationsSeed } = {}) {
   const log = logger || createLogger();
   const dataStore = store || createStore({
-    filePath: process.env.DATA_FILE || path.resolve(__dirname, '../data/electravelin.json'),
-    seed: { vehicles: seedVehicles, stations: seedStations },
+    filePath: resolveDataFile(),
+    seed: { vehicles: seedVehicles, stations: stationsSeed || seedStations },
   });
 
   const authService = createAuthService({ store: dataStore, jwtSecret: jwtSecret || resolveJwtSecret(log) });
@@ -146,12 +152,29 @@ function createApp({ routePlanner, store, jwtSecret, logger, rateLimits } = {}) 
   return app;
 }
 
+// if (require.main === module) {
+//   loadEnvironment();
+//   const logger = createLogger();
+//   const port = process.env.PORT || 3001;
+//   createApp({ logger }).listen(port, () => {
+//     logger.info('server_started', { port, version: VERSION });
+//   });
+// }
+
 if (require.main === module) {
   loadEnvironment();
   const logger = createLogger();
   const port = process.env.PORT || 3001;
-  createApp({ logger }).listen(port, () => {
-    logger.info('server_started', { port, version: VERSION });
+  const needsSeed = !fs.existsSync(resolveDataFile());
+  const seedPromise = needsSeed ? loadSeedStations({ logger }) : Promise.resolve(null);
+
+  seedPromise.then((stationsSeed) => {
+    createApp({ logger, stationsSeed }).listen(port, () => {
+      logger.info('server_started', { port, version: VERSION });
+    });
+  }).catch((error) => {
+    logger.error('server_start_failed', { message: error.message });
+    process.exit(1);
   });
 }
 
