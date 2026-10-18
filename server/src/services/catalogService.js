@@ -1,5 +1,6 @@
 // catalogService.js
-const CONECTORES_VALIDOS = ['CCS2', 'CHAdeMO', 'Type 2'];
+// const CONECTORES_VALIDOS = ['CCS2', 'CHAdeMO', 'Type 2'];
+const CONECTORES_VALIDOS = ['CCS2', 'CHAdeMO', 'Type 2', 'Type 1', 'CCS1', 'Tesla'];
 
 function normaliseText(value) {
   return String(value ?? '').trim().toLowerCase();
@@ -10,7 +11,12 @@ function matchesAny(value, candidates) {
   return candidates.some((candidate) => normalised.includes(normaliseText(candidate)));
 }
 
+// function toNumber(value) {
+//   const parsed = Number(value);
+//   return Number.isFinite(parsed) ? parsed : null;
+// }
 function toNumber(value) {
+  if (value === null || value === undefined || value === '') return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 }
@@ -67,14 +73,21 @@ function validateStationInput(body, { partial = false } = {}) {
       }
     }
   }
+
   for (const field of ['latitud', 'longitud', 'potenciaMaxima_kW', 'tarifa_CLPporKWh']) {
-    if (body[field] !== undefined) {
-      const value = toNumber(body[field]);
-      if (value === null) errors.push(`El campo "${field}" debe ser numérico.`);
-      if (field === 'latitud' && (value < -56 || value > -17)) errors.push('La latitud debe estar dentro de Chile continental.');
-      if (field === 'longitud' && (value < -76 || value > -66)) errors.push('La longitud debe estar dentro de Chile continental.');
+    if (body[field] === undefined) continue;
+    // Tarifa desconocida (null) es válida al actualizar.
+    if (partial && field === 'tarifa_CLPporKWh' && body[field] === null) continue;
+
+    const value = toNumber(body[field]);
+    if (value === null) {
+      errors.push(`El campo "${field}" debe ser numérico.`);
+      continue;
     }
+    if (field === 'latitud' && (value < -56 || value > -17)) errors.push('La latitud debe estar dentro de Chile continental.');
+    if (field === 'longitud' && (value < -76 || value > -66)) errors.push('La longitud debe estar dentro de Chile continental.');
   }
+
   if (body.conectoresDisponibles !== undefined) {
     if (!Array.isArray(body.conectoresDisponibles) || body.conectoresDisponibles.length === 0) {
       errors.push('El campo "conectoresDisponibles" debe ser una lista no vacía.');
@@ -210,6 +223,7 @@ function createCatalogService({ store } = {}) {
     if (body.conectoresDisponibles !== undefined) patch.conectoresDisponibles = body.conectoresDisponibles;
     if (body.disponible !== undefined) patch.disponible = body.disponible;
     if (body.verificada !== undefined) patch.verificada = body.verificada;
+    patch.editadaManualmente = true;
     return { station: store.update('stations', id, patch) };
   }
 
@@ -220,7 +234,8 @@ function createCatalogService({ store } = {}) {
 
   function deactivateStation(id) {
     if (!store.findById('stations', id)) return { error: { status: 404, mensaje: `Estación '${id}' no encontrada.`, detalles: [] } };
-    return { station: store.update('stations', id, { disponible: false }) };
+    // return { station: store.update('stations', id, { disponible: false }) };
+    return { station: store.update('stations', id, { disponible: false, editadaManualmente: true }) };
   }
 
   return {

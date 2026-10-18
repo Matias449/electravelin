@@ -23,7 +23,7 @@ const { createRateLimiter } = require('./middleware/rateLimit');
 const { createRoutePlanningService } = require('./services/routePlanningService');
 const { createSecConnectorService } = require('./services/secConnectorService');
 const { loadEnvironment } = require('./config/loadEnvironment');
-const { loadSeedStations } = require('./services/stationSeed');
+const { loadSeedStations, refreshStationsFromOcm } = require('./services/stationSeed');
 const seedVehicles = require('./data/vehicles.json');
 const seedStations = require('./data/stations.json');
 
@@ -152,27 +152,30 @@ function createApp({ routePlanner, store, jwtSecret, logger, rateLimits, station
   return app;
 }
 
-// if (require.main === module) {
-//   loadEnvironment();
-//   const logger = createLogger();
-//   const port = process.env.PORT || 3001;
-//   createApp({ logger }).listen(port, () => {
-//     logger.info('server_started', { port, version: VERSION });
-//   });
-// }
-
 if (require.main === module) {
   loadEnvironment();
   const logger = createLogger();
   const port = process.env.PORT || 3001;
-  const needsSeed = !fs.existsSync(resolveDataFile());
-  const seedPromise = needsSeed ? loadSeedStations({ logger }) : Promise.resolve(null);
+  const dataFile = resolveDataFile();
+  const seedSource = process.env.STATIONS_SEED_SOURCE || 'both';
 
-  seedPromise.then((stationsSeed) => {
-    createApp({ logger, stationsSeed }).listen(port, () => {
+  (async () => {
+    const isFirstRun = !fs.existsSync(dataFile);
+    const stationsSeed = isFirstRun ? await loadSeedStations({ logger }) : seedStations;
+    const store = createStore({
+      filePath: dataFile,
+      seed: { vehicles: seedVehicles, stations: stationsSeed },
+    });
+
+    // Archivo existente: el refresco es explícito para no consultar la API en cada reinicio.
+    if (!isFirstRun && seedSource !== 'local' && process.env.STATIONS_REFRESH_ON_START === 'true') {
+      await refreshStationsFromOcm({ store, logger });
+    }
+
+    createApp({ logger, store }).listen(port, () => {
       logger.info('server_started', { port, version: VERSION });
     });
-  }).catch((error) => {
+  })().catch((error) => {
     logger.error('server_start_failed', { message: error.message });
     process.exit(1);
   });
