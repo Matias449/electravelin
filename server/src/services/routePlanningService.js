@@ -15,6 +15,18 @@ const ROUTE_CORRIDOR_KM = 35;
 const ORIGIN_STATION_RADIUS_KM = 8;
 const ROUND = (value, decimals = 2) => Math.round(value * (10 ** decimals)) / (10 ** decimals);
 
+const withRetry = async (fn, { retries = 2, baseDelayMs = 300, label = 'routing' } = {}) => {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (!(error instanceof RoutingProviderError) || attempt >= retries) throw error;
+      console.warn(`${label}: intento ${attempt + 1} falló (${error.message}); reintentando…`);
+      await new Promise((r) => setTimeout(r, baseDelayMs * 2 ** attempt));
+    }
+  }
+};
+
 function haversineKm(a, b) {
   const toRad = Math.PI / 180;
   const dLat = (b.latitud - a.latitud) * toRad;
@@ -110,7 +122,7 @@ function formatStation(station, extra = {}) {
     distanciaAlTrazado_km: ROUND(extra.distanciaAlTrazadoKm ?? station.route?.distanceKm ?? station.distanceFromOriginKm ?? 0),
     esCargaInicial: Boolean(extra.esCargaInicial),
     fuente: station.fuente || 'SEC EcoCarga',
-    verificada: station.verificada ?? null,   // !
+    verificada: station.verificada ?? null,
     fechaActualizacion: station.fechaActualizacion || station.ultimaActualizacion || station.fechaRevision || '02/10/2026',
   };
 }
@@ -287,74 +299,6 @@ function resolveKnownCity(value, cities) {
   return city ? { nombre: city.nombre, latitud: city.latitud, longitud: city.longitud } : null;
 }
 
-// function createRoutePlanningService({ providers = createRoutingProviders(), vehicles = defaultVehicles, stations = defaultStations, cities = defaultCities } = {}) {
-//   async function plan({ origin, destination, origenId, destinoId, vehiculoId, socInicial }) {
-//     const inputErrors = [];
-//     const originValue = origin || origenId;
-//     const destinationValue = destination || destinoId;
-//     if (!originValue || typeof originValue !== 'string') inputErrors.push('El campo "origin" es requerido y debe ser texto.');
-//     if (!destinationValue || typeof destinationValue !== 'string') inputErrors.push('El campo "destination" es requerido y debe ser texto.');
-//     if (!vehiculoId || typeof vehiculoId !== 'string') inputErrors.push('El campo "vehiculoId" es requerido y debe ser texto.');
-//     if (!Number.isFinite(socInicial) || socInicial < 0 || socInicial > 100) inputErrors.push('El campo "socInicial" debe ser un número entre 0 y 100.');
-//     if (inputErrors.length) return { exito: false, code: 'VALIDATION_ERROR', error: inputErrors.join(' ') };
-
-//     const vehicle = vehicles.find((item) => item.id === vehiculoId);
-//     if (!vehicle) return { exito: false, code: 'VEHICLE_NOT_FOUND', error: `Vehículo con ID '${vehiculoId}' no encontrado.` };
-
-//     const resolvedOrigin = resolveKnownCity(originValue, cities) || await providers.geocode(`${originValue}, Chile`);
-//     const resolvedDestination = resolveKnownCity(destinationValue, cities) || await providers.geocode(`${destinationValue}, Chile`);
-//     if (resolvedOrigin.latitud === resolvedDestination.latitud && resolvedOrigin.longitud === resolvedDestination.longitud) {
-//       return { exito: false, code: 'VALIDATION_ERROR', error: 'El origen y el destino deben ser distintos.' };
-//     }
-
-//     const directions = await providers.getDirections(resolvedOrigin, resolvedDestination);
-//     const totalDistanceKm = directions.distancia_m / 1000;
-//     const candidateStations = buildCandidateStations({
-//       stations,
-//       vehicle,
-//       coordinates: directions.geometry.coordinates,
-//       totalDistanceKm,
-//     });
-//     const originStations = buildOriginStations({ stations, vehicle, origin: resolvedOrigin });
-//     const calculation = calculateChargingPlan({
-//       vehicle,
-//       stations: candidateStations,
-//       originStations,
-//       totalDistanceKm,
-//       drivingMinutes: directions.duracion_s / 60,
-//       socInicial,
-//     });
-//     const coverageWarning = candidateStations.length === 0 && totalDistanceKm > 0
-//       ? ['No se encontraron estaciones compatibles dentro de 35 km del trazado.']
-//       : [];
-
-//     return {
-//       ...calculation,
-//       vehiculo: {
-//         id: vehicle.id,
-//         modelo: vehicle.modelo,
-//         marca: vehicle.marca,
-//         bateriaUtilizable_kWh: vehicle.bateriaUtilizable_kWh,
-//       },
-//       origen: resolvedOrigin,
-//       destino: resolvedDestination,
-//       geometry: directions.geometry,
-//       advertencias: [...(calculation.advertencias || []), ...coverageWarning],
-//       estacionesOrigenCompatibles: originStations.map((station) => ({
-//         id: station.id,
-//         nombre: station.nombre,
-//         ciudad: station.ciudad,
-//         operador: station.operador,
-//         conector: station.compatibleConnector,
-//         potenciaMaxima_kW: station.potenciaMaxima_kW,
-//         distanciaKm: ROUND(station.distanceFromOriginKm),
-//       })),
-//     };
-//   }
-
-//   return { plan };
-// }
-
 function createRoutePlanningService({
   providers = createRoutingProviders(),
   vehicles = defaultVehicles,
@@ -364,7 +308,6 @@ function createRoutePlanningService({
   ocm = openChargeMap,
   cache = sharedStationsCache,
 } = {}) {
-  // const routeStationsCache = new Map();
   async function getStationsForRoute(coordinates, cacheKey) {
     if (stationsSource === 'local') return { stations, warnings: [] };
 
@@ -407,13 +350,16 @@ function createRoutePlanningService({
     const vehicle = vehicles.find((item) => item.id === vehiculoId);
     if (!vehicle) return { exito: false, code: 'VEHICLE_NOT_FOUND', error: `Vehículo con ID '${vehiculoId}' no encontrado.` };
 
-    const resolvedOrigin = resolveKnownCity(originValue, cities) || await providers.geocode(`${originValue}, Chile`);
-    const resolvedDestination = resolveKnownCity(destinationValue, cities) || await providers.geocode(`${destinationValue}, Chile`);
+    const geocode = (query) => withRetry(() => providers.geocode(query), { label: 'geocode' });
+    const resolvedOrigin = resolveKnownCity(originValue, cities) || await geocode(`${originValue}, Chile`);
+    const resolvedDestination = resolveKnownCity(destinationValue, cities) || await geocode(`${destinationValue}, Chile`);
     if (resolvedOrigin.latitud === resolvedDestination.latitud && resolvedOrigin.longitud === resolvedDestination.longitud) {
       return { exito: false, code: 'VALIDATION_ERROR', error: 'El origen y el destino deben ser distintos.' };
     }
 
-    const directions = await providers.getDirections(resolvedOrigin, resolvedDestination);
+    const directions = await withRetry(
+      () => providers.getDirections(resolvedOrigin, resolvedDestination), { label: 'getDirections' }
+    );
     const totalDistanceKm = directions.distancia_m / 1000;
 
     const cacheKey = [resolvedOrigin, resolvedDestination]
