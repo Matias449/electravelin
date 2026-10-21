@@ -63,12 +63,17 @@ function toQuery(filters = {}) {
 
 // ─── Catálogo público ───────────────────────────────────────────────────────
 export async function fetchVehiculos(filters = {}) {
-  const data = await request(`/vehiculos${toQuery(filters)}`);
+  const data = await request(`/vehiculos${toQuery(filters)}`, { auth: true });
   return data.vehiculos;
 }
 
 export async function fetchEstaciones(filters = {}) {
   const data = await request(`/estaciones${toQuery(filters)}`);
+  return data.estaciones;
+}
+
+export async function fetchEstacionesSec(filters = {}) {
+  const data = await request(`/estaciones/sec${toQuery(filters)}`);
   return data.estaciones;
 }
 
@@ -124,6 +129,25 @@ export async function addFavorite(payload) {
 
 export async function removeFavorite(id) {
   return request(`/favoritos/${id}`, { method: 'DELETE', auth: true });
+}
+
+export async function fetchMisVehiculos() {
+  const data = await request('/mis-vehiculos', { auth: true });
+  return data.vehiculos;
+}
+
+export async function createMiVehiculo(payload) {
+  const data = await request('/mis-vehiculos', { method: 'POST', body: payload, auth: true });
+  return data.vehiculo;
+}
+
+export async function updateMiVehiculo(id, payload) {
+  const data = await request(`/mis-vehiculos/${id}`, { method: 'PUT', body: payload, auth: true });
+  return data.vehiculo;
+}
+
+export async function deleteMiVehiculo(id) {
+  return request(`/mis-vehiculos/${id}`, { method: 'DELETE', auth: true });
 }
 
 // ─── Administración ────────────────────────────────────────────────────────

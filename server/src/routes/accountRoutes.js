@@ -11,6 +11,10 @@ function createAccountRoutes({ accountController, authMiddleware }) {
   router.get('/favoritos', authMiddleware.requireAuth, accountController.listFavorites);
   router.post('/favoritos', authMiddleware.requireAuth, accountController.addFavorite);
   router.delete('/favoritos/:id', authMiddleware.requireAuth, accountController.removeFavorite);
+  router.get('/mis-vehiculos', authMiddleware.requireAuth, accountController.listUserVehicles);
+  router.post('/mis-vehiculos', authMiddleware.requireAuth, accountController.createUserVehicle);
+  router.put('/mis-vehiculos/:id', authMiddleware.requireAuth, accountController.updateUserVehicle);
+  router.delete('/mis-vehiculos/:id', authMiddleware.requireAuth, accountController.deleteUserVehicle);
 
   return router;
 }

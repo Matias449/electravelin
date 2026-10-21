@@ -51,7 +51,16 @@ function createAuthMiddleware({ authService }) {
     });
   }
 
-  return { requireAuth, requireAdmin };
+  function optionalAuth(req, res, next) {
+    try {
+      attachUser(req);
+    } catch {
+      // Ignorar si el token no existe, está expirado o malformado
+    }
+    return next();
+  }
+
+  return { requireAuth, requireAdmin, optionalAuth };
 }
 
 module.exports = { createAuthMiddleware };

@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { createTestApp, createAdminToken, withServer, request, registerUser } = require('../test-utils/helpers');
 
-test('el catálogo público expone al menos 15 vehículos y 15 estaciones verificadas', async () => {
+test('el catálogo público expone al menos 15 vehículos y 15 estaciones', async () => {
   const { app } = createTestApp();
   await withServer(app, async (baseUrl) => {
     const vehicles = await request(baseUrl, '/api/vehiculos');
@@ -13,6 +13,8 @@ test('el catálogo público expone al menos 15 vehículos y 15 estaciones verifi
     assert.equal(stations.status, 200);
     assert.ok(stations.body.estaciones.length >= 15, `estaciones: ${stations.body.estaciones.length}`);
     assert.ok(stations.body.estaciones.every((station) => station.ciudad && station.operador && station.conectoresDisponibles.length > 0));
+    const ubicacionesPublicadas = stations.body.estaciones.filter((station) => station.ubicacionVerificada && station.direccion && station.urlFuenteUbicacion);
+    assert.ok(ubicacionesPublicadas.length >= 15, `ubicaciones con dirección y fuente: ${ubicacionesPublicadas.length}`);
   });
 });
 
@@ -35,6 +37,10 @@ test('filtros públicos de vehículos y estaciones', async () => {
 
     const rapidas = await request(baseUrl, '/api/estaciones?conector=CCS2&potenciaMin=100');
     assert.ok(rapidas.body.estaciones.every((station) => station.conectoresDisponibles.includes('CCS2') && station.potenciaMaxima_kW >= 100));
+
+    const porDireccion = await request(baseUrl, '/api/estaciones?busqueda=Portugal%20175');
+    assert.ok(porDireccion.body.estaciones.length >= 1);
+    assert.ok(porDireccion.body.estaciones.every((station) => station.direccion?.includes('Portugal 175')));
   });
 });
 

@@ -16,6 +16,8 @@ export default function Vehicle3DViewer({ vehiculo, soc = 80, isCharging = false
   const [loadError, setLoadError] = useState(null);
 
   const hasReal3D = Boolean(vehiculo?.tieneModelo3D && vehiculo?.modelo3DUrl);
+  const isReference3D = vehiculo?.modelo3DTipo === 'referencial';
+  const modelLabel = isReference3D ? 'MODELO 3D REFERENCIAL' : 'MODELO 3D (GLTF/GLB)';
 
   useEffect(() => {
     if (!hasReal3D) return;
@@ -202,10 +204,10 @@ export default function Vehicle3DViewer({ vehiculo, soc = 80, isCharging = false
             <button
               type="button"
               className="btn btn--small btn--primary"
-              onClick={() => onSelectRealModel('tesla_model3_lr')}
+              onClick={() => onSelectRealModel('byd_dolphin')}
               style={{ fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: 5 }}
             >
-              <Sparkles size={12} /> Ver Tesla 3D Real
+              <Sparkles size={12} /> Ver modelo 3D disponible
             </button>
           )}
         </div>
@@ -237,7 +239,7 @@ export default function Vehicle3DViewer({ vehiculo, soc = 80, isCharging = false
               Modelo 3D no disponible para este vehículo
             </p>
             <p style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', margin: '3px 0 0' }}>
-              Actualmente disponemos del <strong>modelo 3D real (GLB)</strong> para <em>Tesla Model 3</em> y <em>Tesla Model Y</em>. Para el resto de los modelos se calculan las rutas con sus fichas técnicas exactas.
+              Algunos vehículos cuentan con una vista 3D. Para los demás, la planificación usa sus fichas técnicas de autonomía y carga.
             </p>
           </div>
         </div>
@@ -276,7 +278,7 @@ export default function Vehicle3DViewer({ vehiculo, soc = 80, isCharging = false
             textTransform: 'uppercase',
             letterSpacing: '0.06em'
           }}>
-            <CheckCircle2 size={13} color="#10b981" /> MODELO 3D REAL (GLTF/GLB)
+            <CheckCircle2 size={13} color="#10b981" /> {modelLabel}
           </span>
           <h4 className="vehicle-3d-model-name">
             {vehiculo.marca} {vehiculo.modelo}
@@ -310,7 +312,7 @@ export default function Vehicle3DViewer({ vehiculo, soc = 80, isCharging = false
           }}>
             <div className="spinner" />
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: '#00d4ff' }}>
-              Cargando modelo 3D real ({loadProgress}%)…
+              Cargando modelo 3D ({loadProgress}%)…
             </span>
           </div>
         )}
@@ -333,7 +335,7 @@ export default function Vehicle3DViewer({ vehiculo, soc = 80, isCharging = false
           ref={mountRef}
           className="vehicle-3d-canvas-wrap"
           style={{ height: 260 }}
-          title="Arrastra para rotar el Tesla Model 3 en 360°"
+          title="Arrastra para rotar el modelo 3D en 360°"
         />
       </div>
 
@@ -352,6 +354,14 @@ export default function Vehicle3DViewer({ vehiculo, soc = 80, isCharging = false
           <span className="hud-metric-val">{vehiculo.potenciaCargaMaxima_kW || 250} <small>kW</small></span>
         </div>
       </div>
+      {isReference3D && (
+        <p className="form-helper" style={{ margin: '10px 0 0', lineHeight: 1.45 }}>
+          Esta vista es una referencia de silueta y proporciones; no representa exactamente la carroceria de {vehiculo.marca} {vehiculo.modelo}.
+          {vehiculo.modelo3DFuenteUrl && (
+            <> Fuente: <a href={vehiculo.modelo3DFuenteUrl} target="_blank" rel="noreferrer">{vehiculo.modelo3DCredito || 'modelo con licencia abierta'}</a>.</>
+          )}
+        </p>
+      )}
     </div>
   );
 }

@@ -2,12 +2,12 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from './hooks/useTheme';
-import { Compass, Zap, User, Sliders, LogOut, ShieldCheck, Sun, Moon } from 'lucide-react';
+import { Home, Map, User, Sliders, LogOut, ShieldCheck, Sun, Moon, Zap, Route } from 'lucide-react';
 
 const TABS = [
-  { id: 'planificar', label: 'Planificar', icon: Compass },
-  { id: 'catalogo', label: 'Catálogo', icon: Zap },
-  { id: 'perfil', label: 'Mi perfil', icon: User },
+  { id: 'inicio', label: 'Inicio', icon: Home },
+  { id: 'ruta', label: 'Mi ruta', icon: Map },
+  { id: 'sesion', label: 'Sesión', icon: User },
   { id: 'admin', label: 'Administración', icon: Sliders, requiresAdmin: true },
 ];
 
@@ -29,15 +29,7 @@ export default function Header({ vista, onNavigate, onOpenAuth }) {
           </div>
           <div>
             <h1 className="header__title">Electravelin</h1>
-            <span style={{
-              fontSize: '0.68rem',
-              fontFamily: 'var(--font-mono)',
-              color: 'var(--accent-cyan)',
-              letterSpacing: '0.06em',
-              textTransform: 'uppercase'
-            }}>
-              EV ROUTE OS · RUTA 5 CHILE
-            </span>
+            <span className="header__strapline">EV Route OS · Chile</span>
           </div>
         </div>
 
@@ -74,9 +66,12 @@ export default function Header({ vista, onNavigate, onOpenAuth }) {
         </div>
       </div>
 
-      <p className="header__subtitle">
-        Planificación avanzada para vehículos eléctricos por Chile. Telemetría de batería, paradas óptimas y costos en la Ruta 5.
-      </p>
+      <div className="header__intro">
+        <p className="header__subtitle">
+          Viajes eléctricos por Chile, con rutas calculadas según tu vehículo y una red de carga verificable.
+        </p>
+        <span className="header__live-status"><Route size={14} aria-hidden="true" /> Ruta y carga en un solo lugar</span>
+      </div>
 
       <nav className="main-nav" aria-label="Secciones">
         {tabs.map((tab) => {
