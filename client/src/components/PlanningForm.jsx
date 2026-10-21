@@ -3,7 +3,8 @@ import { fetchVehiculos, fetchCiudades, calcularRuta } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import Vehicle3DViewer from './Vehicle3DViewer';
 import ConnectorBlueprint from './ConnectorBlueprint';
-import { Compass, MapPin, Navigation, Car, Zap, Battery, ShieldAlert, Cpu } from 'lucide-react';
+import CustomVehicleModal from './CustomVehicleModal';
+import { Compass, MapPin, Navigation, Car, Zap, Battery, ShieldAlert, Cpu, Plus } from 'lucide-react';
 
 /**
  * PlanningForm — Formulario principal de planificación de viaje (RF01-RF05, RF20)
@@ -11,7 +12,7 @@ import { Compass, MapPin, Navigation, Car, Zap, Battery, ShieldAlert, Cpu } from
  *
  * @param {{ onResult: (data: Object) => void }} props
  */
-export default function PlanningForm({ onResult }) {
+export default function PlanningForm({ onResult, onRequireAuth }) {
   const { usuario } = useAuth();
 
   // ─── State: catálogos ──────────────────────────────────────────────────
@@ -19,6 +20,9 @@ export default function PlanningForm({ onResult }) {
   const [ciudades, setCiudades] = useState([]);
   const [loadingCatalogos, setLoadingCatalogos] = useState(true);
   const [errorCatalogos, setErrorCatalogos] = useState('');
+
+  // ─── State: modal vehículo personalizado ────────────────────────────────
+  const [modalVehiculoOpen, setModalVehiculoOpen] = useState(false);
 
   // ─── State: formulario ─────────────────────────────────────────────────
   const [origenId, setOrigenId] = useState('');
@@ -32,26 +36,35 @@ export default function PlanningForm({ onResult }) {
   const [errores, setErrores] = useState({});
 
   // ─── Cargar catálogos al montar ────────────────────────────────────────
-  useEffect(() => {
-    let active = true;
-    async function cargarDatos() {
-      try {
-        const [vehiculosData, ciudadesData] = await Promise.all([
-          fetchVehiculos(),
-          fetchCiudades(),
-        ]);
-        if (!active) return;
-        setVehiculos(vehiculosData);
-        setCiudades(ciudadesData);
-
-      } catch (err) {
-        if (active) setErrorCatalogos(err.message || 'No se pudo cargar el catálogo.');
-      } finally {
-        if (active) setLoadingCatalogos(false);
+  async function cargarDatos(autoSelectId = null) {
+    try {
+      const [vehiculosData, ciudadesData] = await Promise.all([
+        fetchVehiculos(),
+        fetchCiudades(),
+      ]);
+      setVehiculos(vehiculosData);
+      setCiudades(ciudadesData);
+      if (autoSelectId) {
+        setVehiculoId(autoSelectId);
       }
+    } catch (err) {
+      setErrorCatalogos(err.message || 'No se pudo cargar el catálogo.');
+    } finally {
+      setLoadingCatalogos(false);
     }
+  }
+
+  useEffect(() => {
     cargarDatos();
-    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    function handleVehiclesUpdated(e) {
+      const newId = e.detail?.vehicle?.id;
+      cargarDatos(newId);
+    }
+    window.addEventListener('electravelin:vehicles-updated', handleVehiclesUpdated);
+    return () => window.removeEventListener('electravelin:vehicles-updated', handleVehiclesUpdated);
   }, []);
 
   // Preselecciona el vehículo habitual del perfil, si existe.
@@ -190,9 +203,30 @@ export default function PlanningForm({ onResult }) {
 
           {/* Vehículo */}
           <div className="form-group form-group--full">
-            <label className="form-label" htmlFor="input-vehiculo" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <Car size={13} color="#00d4ff" /> Vehículo Eléctrico
-            </label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 4 }}>
+              <label className="form-label" htmlFor="input-vehiculo" style={{ display: 'flex', alignItems: 'center', gap: 5, margin: 0 }}>
+                <Car size={13} color="#00d4ff" /> Vehículo Eléctrico
+              </label>
+              {usuario ? (
+                <button
+                  type="button"
+                  className="link-button"
+                  onClick={() => setModalVehiculoOpen(true)}
+                  style={{ fontSize: '0.74rem', color: 'var(--accent-cyan)', background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, padding: 0 }}
+                >
+                  <Plus size={12} /> ¿No está tu auto en el catálogo? Regístralo
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="link-button"
+                  onClick={onRequireAuth}
+                  style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  ¿No está tu auto? Inicia sesión para agregarlo
+                </button>
+              )}
+            </div>
             <select
               id="input-vehiculo"
               className={`form-select ${errores.vehiculo ? 'form-input--error' : ''}`}
@@ -201,15 +235,26 @@ export default function PlanningForm({ onResult }) {
               disabled={loadingCatalogos}
             >
               <option value="">— Selecciona tu vehículo —</option>
-              {vehiculos.map((v) => {
-                const has3D = Boolean(v.tieneModelo3D && v.modelo3DUrl);
-                const modelPrefix = has3D ? '★ [Modelo 3D disponible] ' : '';
-                return (
-                  <option key={v.id} value={v.id}>
-                    {modelPrefix}{v.modelo} — {v.bateriaUtilizable_kWh} kWh | {v.consumoReferencia_kWhPor100km} kWh/100km
-                  </option>
-                );
-              })}
+              {vehiculos.filter((v) => v.esPersonalizado).length > 0 && (
+                <optgroup label="Mis Vehículos Registrados">
+                  {vehiculos.filter((v) => v.esPersonalizado).map((v) => (
+                    <option key={v.id} value={v.id}>
+                      🚗 [Mi Auto] {v.marca} {v.modelo} — {v.bateriaUtilizable_kWh} kWh | {v.consumoReferencia_kWhPor100km} kWh/100km
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              <optgroup label="Catálogo Oficial">
+                {vehiculos.filter((v) => !v.esPersonalizado).map((v) => {
+                  const has3D = Boolean(v.tieneModelo3D && v.modelo3DUrl);
+                  const modelPrefix = has3D ? '★ [Modelo 3D disponible] ' : '';
+                  return (
+                    <option key={v.id} value={v.id}>
+                      {modelPrefix}{v.marca} {v.modelo} — {v.bateriaUtilizable_kWh} kWh | {v.consumoReferencia_kWhPor100km} kWh/100km
+                    </option>
+                  );
+                })}
+              </optgroup>
             </select>
             {errores.vehiculo && (
               <span className="form-error">{errores.vehiculo}</span>
@@ -306,6 +351,17 @@ export default function PlanningForm({ onResult }) {
           </div>
         </div>
       </form>
+
+      {modalVehiculoOpen && (
+        <CustomVehicleModal
+          onClose={() => setModalVehiculoOpen(false)}
+          onSuccess={(nuevoVehiculo) => {
+            if (nuevoVehiculo?.id) {
+              setVehiculoId(nuevoVehiculo.id);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

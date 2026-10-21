@@ -1,4 +1,4 @@
-const CONECTORES_VALIDOS = ['CCS2', 'CHAdeMO', 'Type 2'];
+const CONECTORES_VALIDOS = ['CCS2', 'CHAdeMO', 'Type 2', 'Type 1', 'CCS1', 'Tesla'];
 
 function normaliseText(value) {
   return String(value ?? '').trim().toLowerCase();
@@ -108,10 +108,16 @@ function createCatalogService({ store } = {}) {
   if (!store) throw new Error('createCatalogService requiere un store.');
 
   function listVehicles(filters = {}) {
-    const { marca, conector, bateriaMin, potenciaMin, incluirInactivos } = filters;
+    const { marca, conector, bateriaMin, potenciaMin, incluirInactivos, incluirPersonalizados, userId } = filters;
     return store
       .all('vehicles')
       .filter((vehicle) => incluirInactivos === true || vehicle.activo !== false)
+      .filter((vehicle) => {
+        if (!vehicle.esPersonalizado) return true;
+        if (incluirPersonalizados) return true;
+        if (userId && vehicle.userId === userId) return true;
+        return false;
+      })
       .filter((vehicle) => !marca || normaliseText(vehicle.marca).includes(normaliseText(marca)))
       .filter((vehicle) => !conector || vehicle.conectoresCompatibles?.includes(conector))
       .filter((vehicle) => !bateriaMin || Number(vehicle.bateriaUtilizable_kWh) >= Number(bateriaMin))
@@ -247,4 +253,10 @@ function createCatalogService({ store } = {}) {
   };
 }
 
-module.exports = { createCatalogService, CONECTORES_VALIDOS };
+module.exports = {
+  createCatalogService,
+  CONECTORES_VALIDOS,
+  validateVehicleInput,
+  toNumber,
+  slugify,
+};

@@ -80,7 +80,7 @@ function createApp({ routePlanner, store, jwtSecret, logger, rateLimits, secPubl
   const cityController = createCityController();
 
   const planner = routePlanner || (() => createRoutePlanningService({
-    vehicles: catalogService.listVehicles(),
+    vehicles: catalogService.listVehicles({ incluirPersonalizados: true }),
     stations: catalogService.listStations(),
   }));
 
@@ -100,7 +100,7 @@ function createApp({ routePlanner, store, jwtSecret, logger, rateLimits, secPubl
   app.use('/api/routes/plan', plannerLimiter);
   app.use('/api', createAccountRoutes({ accountController, authMiddleware }));
   app.use('/api/admin', createAdminRoutes({ catalogController, authMiddleware }));
-  app.use('/api', createRouteRoutes({ routePlanner: planner, catalogController, cityController, logger: log }));
+  app.use('/api', createRouteRoutes({ routePlanner: planner, catalogController, cityController, logger: log, authMiddleware }));
 
   app.get('/api/health', (req, res) => {
     res.json({

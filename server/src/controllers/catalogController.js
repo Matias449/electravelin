@@ -33,7 +33,8 @@ function createCatalogController({ catalogService, auditService, secConnectorSer
   return {
     listVehicles(req, res) {
       const { marca, conector, bateriaMin, potenciaMin } = req.query;
-      return res.json({ exito: true, vehiculos: catalogService.listVehicles({ marca, conector, bateriaMin, potenciaMin }) });
+      const userId = req.user?.id;
+      return res.json({ exito: true, vehiculos: catalogService.listVehicles({ marca, conector, bateriaMin, potenciaMin, userId }) });
     },
 
     listStations(req, res) {

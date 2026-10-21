@@ -269,10 +269,10 @@ function resolveKnownCity(value, cities) {
 }
 
 function createRoutePlanningService({ providers = createRoutingProviders(), vehicles = defaultVehicles, stations = defaultStations, cities = defaultCities } = {}) {
-  async function plan({ origin, destination, origenId, destinoId, vehiculoId, socInicial }) {
+  async function plan({ origin, destination, origen, destino, origenId, destinoId, vehiculoId, socInicial }) {
     const inputErrors = [];
-    const originValue = origin || origenId;
-    const destinationValue = destination || destinoId;
+    const originValue = origin || origen || origenId;
+    const destinationValue = destination || destino || destinoId;
     if (!originValue || typeof originValue !== 'string') inputErrors.push('El campo "origin" es requerido y debe ser texto.');
     if (!destinationValue || typeof destinationValue !== 'string') inputErrors.push('El campo "destination" es requerido y debe ser texto.');
     if (!vehiculoId || typeof vehiculoId !== 'string') inputErrors.push('El campo "vehiculoId" es requerido y debe ser texto.');

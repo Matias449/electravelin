@@ -4,8 +4,9 @@ const {
   crearPlanRoute,
 } = require('../controllers/routeController');
 
-function createRouteRoutes({ routePlanner, catalogController, cityController, logger } = {}) {
+function createRouteRoutes({ routePlanner, catalogController, cityController, logger, authMiddleware } = {}) {
   const router = express.Router();
+  const optionalAuth = authMiddleware?.optionalAuth || ((req, res, next) => next());
 
   // Endpoint v1, mantenido durante la migración de los clientes existentes.
   router.post('/calcular-ruta', crearCalcularRuta(logger));
@@ -14,7 +15,7 @@ function createRouteRoutes({ routePlanner, catalogController, cityController, lo
   router.post('/routes/plan', crearPlanRoute(routePlanner, logger));
 
   // Catálogo público con filtros (marca, conector, ciudad, operador, potencia).
-  router.get('/vehiculos', catalogController.listVehicles);
+  router.get('/vehiculos', optionalAuth, catalogController.listVehicles);
   router.get('/estaciones', catalogController.listStations);
   router.get('/estaciones/sec', catalogController.listLiveSecStations);
   router.get('/estaciones/fuente', catalogController.getSecMetadata);

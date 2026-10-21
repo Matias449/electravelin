@@ -89,7 +89,7 @@ function AppContent() {
               <button type="button" role="tab" aria-selected={subVistaRuta === 'catalogo'} className={subVistaRuta === 'catalogo' ? 'route-workspace__tab route-workspace__tab--active' : 'route-workspace__tab'} onClick={() => navegar('ruta', 'catalogo')}>2. Red de carga</button>
             </div>
             {subVistaRuta === 'planificar' && <>
-            <PlanningForm onResult={handleResult} />
+            <PlanningForm onResult={handleResult} onRequireAuth={requireAuth} />
             <div ref={resultsRef}>
               <RouteResults resultado={resultado} consulta={consulta} onRequireAuth={requireAuth} />
             </div>
@@ -98,7 +98,7 @@ function AppContent() {
           </section>
         )}
 
-        {vista === 'sesion' && <ProfilePanel onRequireAuth={requireAuth} />}
+        {vista === 'sesion' && <ProfilePanel onRequireAuth={requireAuth} onNavigate={navegar} />}
 
         {vista === 'admin' && (
           usuario?.rol === 'admin'

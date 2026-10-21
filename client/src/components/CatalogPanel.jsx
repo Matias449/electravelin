@@ -1,9 +1,9 @@
-// CatalogPanel.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import StationsMap from './StationsMap';
+import CustomVehicleModal from './CustomVehicleModal';
 import * as api from '../utils/api';
-import { Search, Car, Zap, Star, Filter, ShieldCheck, MapPin, ExternalLink } from 'lucide-react';
+import { Search, Car, Zap, Star, Filter, ShieldCheck, MapPin, ExternalLink, Plus } from 'lucide-react';
 
 const CONECTORES = ['', 'CCS2', 'CHAdeMO'];
 
@@ -50,6 +50,15 @@ export default function CatalogPanel({ onRequireAuth }) {
   const [cargando, setCargando] = useState(false);
   const [estacionSeleccionada, setEstacionSeleccionada] = useState(null);
   const [vehiculoId, setVehiculoId] = useState('');
+  const [modalVehiculoOpen, setModalVehiculoOpen] = useState(false);
+
+  useEffect(() => {
+    function handleVehiclesUpdated() {
+      api.fetchVehiculos().then((data) => setVehiculos(data)).catch(() => {});
+    }
+    window.addEventListener('electravelin:vehicles-updated', handleVehiclesUpdated);
+    return () => window.removeEventListener('electravelin:vehicles-updated', handleVehiclesUpdated);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -176,16 +185,67 @@ export default function CatalogPanel({ onRequireAuth }) {
         {cargando && <p className="form-helper">Consultando base de datos oficial…</p>}
 
         {tipo === 'vehiculos' && (
-          <ul className="list">
-            {vehiculos.map((vehicle) => {
-              const fav = esFavorito(vehicle.id, 'vehiculo');
-              const modeloReferencial = vehicle.modelo3DTipo === 'referencial';
-              return (
-                <li key={vehicle.id} className="list__item">
+          <>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: 'linear-gradient(135deg, rgba(0, 212, 255, 0.06), rgba(124, 58, 237, 0.06))',
+              border: '1px solid var(--border-accent)',
+              borderRadius: 'var(--radius-md)',
+              padding: '12px 16px',
+              marginBottom: 'var(--space-md)',
+              flexWrap: 'wrap',
+              gap: 10,
+            }}>
+              <div>
+                <strong style={{ fontSize: '0.92rem', color: '#fff', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Car size={16} color="var(--accent-cyan)" /> ¿No encuentras tu modelo de auto en el catálogo?
+                </strong>
+                <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                  Sube tu vehículo personalizado con sus especificaciones técnicas para tenerlo en tu perfil y usarlo en el planificador.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn--primary btn--small"
+                onClick={() => {
+                  if (!usuario) {
+                    onRequireAuth();
+                  } else {
+                    setModalVehiculoOpen(true);
+                  }
+                }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}
+              >
+                <Plus size={14} /> Subir mi vehículo
+              </button>
+            </div>
+
+            <ul className="list">
+              {vehiculos.map((vehicle) => {
+                const fav = esFavorito(vehicle.id, 'vehiculo');
+                const modeloReferencial = vehicle.modelo3DTipo === 'referencial';
+                return (
+                  <li key={vehicle.id} className="list__item">
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       <strong style={{ fontFamily: 'var(--font-heading)', fontSize: '1rem', color: '#fff' }}>
                         {vehicle.marca} {vehicle.modelo}
                       </strong>
+                      {vehicle.esPersonalizado && (
+                        <span style={{
+                          background: 'rgba(0, 212, 255, 0.15)',
+                          border: '1px solid rgba(0, 212, 255, 0.4)',
+                          color: 'var(--accent-cyan)',
+                          fontSize: '0.68rem',
+                          fontWeight: 700,
+                          fontFamily: 'var(--font-mono)',
+                          padding: '2px 6px',
+                          borderRadius: 4
+                        }}>
+                          ★ MI VEHÍCULO (PERSONALIZADO)
+                        </span>
+                      )}
                       {(vehicle.tieneModelo3D || vehicle.id?.includes('tesla')) ? (
                         <span style={{
                           background: 'rgba(16, 185, 129, 0.15)',
@@ -235,7 +295,8 @@ export default function CatalogPanel({ onRequireAuth }) {
             })}
             {!cargando && vehiculos.length === 0 && <li className="list__empty">Sin resultados con esos filtros.</li>}
           </ul>
-        )}
+        </>
+      )}
 
         {tipo === 'estaciones' && (
           <div className="stations-explorer">
@@ -331,6 +392,15 @@ export default function CatalogPanel({ onRequireAuth }) {
           </div>
         )}
       </div>
+
+      {modalVehiculoOpen && (
+        <CustomVehicleModal
+          onClose={() => setModalVehiculoOpen(false)}
+          onSuccess={() => {
+            api.fetchVehiculos().then((data) => setVehiculos(data)).catch(() => {});
+          }}
+        />
+      )}
     </section>
   );
 }
