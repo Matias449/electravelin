@@ -1,6 +1,9 @@
+// routePlanningService.test.js
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { createRoutePlanningService } = require('../src/services/routePlanningService');
+// const { createRoutePlanningService } = require('../src/services/routePlanningService');
+const { createRoutePlanningService: createService } = require('../src/services/routePlanningService');
+const createRoutePlanningService = (options) => createService({ stationsSource: 'local', cache: new Map(), ...options });
 
 const vehicle = {
   id: 'test-ev',
@@ -124,3 +127,76 @@ test('RF17, RF10 & RN06: conserva metadatos de fuente, fecha y maneja tarifa des
   assert.ok(result.advertencias.some((w) => /tarifa informada/i.test(w)));
 });
 
+const planInput = { origin: 'Origen', destination: 'Destino', vehiculoId: 'test-ev', socInicial: 40 };
+
+test('stationsSource "ocm" usa solo estaciones de Open Charge Map', async () => {
+  let receivedCoordinates = null;
+  const service = createRoutePlanningService({
+    providers: providerFixture(),
+    vehicles: [vehicle],
+    stations: [], // el JSON local no aporta nada
+    stationsSource: 'ocm',
+    ocm: {
+      fetchStationsAlongRoute: async (coordinates) => {
+        receivedCoordinates = coordinates;
+        return [{ ...station(), id: 'ocm_1', fuente: 'Open Charge Map', tarifa_CLPporKWh: null }];
+      },
+    },
+  });
+  const result = await service.plan(planInput);
+
+  assert.equal(result.exito, true);
+  assert.deepEqual(receivedCoordinates, [[0, 0], [2, 0]]);
+  assert.equal(result.paradas[0].estacionId, 'ocm_1');
+  assert.equal(result.paradas[0].fuente, 'Open Charge Map');
+  assert.equal(result.resumen.costoIncompleto, true);
+});
+
+test('stationsSource "both" prefiere la estación local cuando hay duplicado cercano', async () => {
+  const service = createRoutePlanningService({
+    providers: providerFixture(),
+    vehicles: [vehicle],
+    stations: [station()],
+    stationsSource: 'both',
+    ocm: {
+      fetchStationsAlongRoute: async () => [
+        { ...station(), id: 'ocm_1', tarifa_CLPporKWh: null }, 
+      ],
+    },
+  });
+  const result = await service.plan(planInput);
+
+  assert.equal(result.exito, true);
+  assert.equal(result.paradas[0].estacionId, 'station-1');
+  assert.notEqual(result.paradas[0].costo_CLP, null);
+});
+
+test('si Open Charge Map falla, usa las estaciones locales y agrega una advertencia', async () => {
+  const service = createRoutePlanningService({
+    providers: providerFixture(),
+    vehicles: [vehicle],
+    stations: [station()],
+    stationsSource: 'both',
+    ocm: { fetchStationsAlongRoute: async () => { throw new Error('API caída'); } },
+  });
+  const result = await service.plan(planInput);
+
+  assert.equal(result.exito, true);
+  assert.equal(result.paradas[0].estacionId, 'station-1');
+  assert.ok(result.advertencias.some((w) => /Open Charge Map/i.test(w)));
+});
+
+test('cachea la consulta a Open Charge Map para la misma ruta', async () => {
+  let calls = 0;
+  const service = createRoutePlanningService({
+    providers: providerFixture(),
+    vehicles: [vehicle],
+    stations: [],
+    stationsSource: 'ocm',
+    ocm: { fetchStationsAlongRoute: async () => { calls += 1; return [station()]; } },
+  });
+  await service.plan(planInput);
+  await service.plan(planInput);
+
+  assert.equal(calls, 1);
+});

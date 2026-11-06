@@ -1,7 +1,9 @@
+require('dotenv').config();
 const crypto = require('crypto');
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs');
 const createRouteRoutes = require('./routes/routeRoutes');
 const { createAuthRoutes } = require('./routes/authRoutes');
 const { createAccountRoutes } = require('./routes/accountRoutes');
@@ -22,10 +24,15 @@ const { createRoutePlanningService } = require('./services/routePlanningService'
 const { createSecConnectorService } = require('./services/secConnectorService');
 const { createSecPublicCatalogService } = require('./services/secPublicCatalogService');
 const { loadEnvironment } = require('./config/loadEnvironment');
+const { loadSeedStations, refreshStationsFromOcm } = require('./services/stationSeed');
 const seedVehicles = require('./data/vehicles.json');
 const seedStations = require('./data/stations.json');
 
 const VERSION = '2.0.0-mvp';
+
+function resolveDataFile() {
+  return process.env.DATA_FILE || path.resolve(__dirname, '../data/electravelin.json');
+}
 
 function resolveJwtSecret(logger) {
   if (process.env.JWT_SECRET) return process.env.JWT_SECRET;
@@ -58,11 +65,11 @@ function ensureBootstrapAdmin(store, authService, logger) {
   }
 }
 
-function createApp({ routePlanner, store, jwtSecret, logger, rateLimits, secPublicCatalogService } = {}) {
+function createApp({ routePlanner, store, jwtSecret, logger, rateLimits, stationsSeed, secPublicCatalogService } = {}) {
   const log = logger || createLogger();
   const dataStore = store || createStore({
-    filePath: process.env.DATA_FILE || path.resolve(__dirname, '../data/electravelin.json'),
-    seed: { vehicles: seedVehicles, stations: seedStations },
+    filePath: resolveDataFile(),
+    seed: { vehicles: seedVehicles, stations: stationsSeed || seedStations },
   });
 
   const authService = createAuthService({ store: dataStore, jwtSecret: jwtSecret || resolveJwtSecret(log) });
@@ -151,8 +158,28 @@ if (require.main === module) {
   loadEnvironment();
   const logger = createLogger();
   const port = process.env.PORT || 3001;
-  createApp({ logger }).listen(port, () => {
-    logger.info('server_started', { port, version: VERSION });
+  const dataFile = resolveDataFile();
+  const seedSource = process.env.STATIONS_SEED_SOURCE || 'both';
+
+  (async () => {
+    const isFirstRun = !fs.existsSync(dataFile);
+    const stationsSeed = isFirstRun ? await loadSeedStations({ logger }) : seedStations;
+    const store = createStore({
+      filePath: dataFile,
+      seed: { vehicles: seedVehicles, stations: stationsSeed },
+    });
+
+    // Archivo existente: el refresco es explícito para no consultar la API en cada reinicio.
+    if (!isFirstRun && seedSource !== 'local' && process.env.STATIONS_REFRESH_ON_START === 'true') {
+      await refreshStationsFromOcm({ store, logger });
+    }
+
+    createApp({ logger, store }).listen(port, () => {
+      logger.info('server_started', { port, version: VERSION });
+    });
+  })().catch((error) => {
+    logger.error('server_start_failed', { message: error.message });
+    process.exit(1);
   });
 }
 

@@ -1,12 +1,31 @@
+// routePlanningService.js
 const { calcularRecarga, encontrarConectorCompatible, RESERVA_SOC_MIN, OBJETIVO_CARGA_MAX } = require('./batteryService');
 const { createRoutingProviders, RoutingProviderError } = require('./routingProviders');
 const defaultVehicles = require('../data/vehicles.json');
 const defaultStations = require('../data/stations.json');
 const defaultCities = require('../data/mockRoutes.json').ciudades;
 
+const openChargeMap = require('./openChargeMapService');
+const STATIONS_CACHE_TTL_MS = 30 * 60 * 1000; // 30 min
+const DUPLICATE_DISTANCE_KM = 0.1;            // estaciones a <100 m = misma estación
+const sharedStationsCache = new Map();
+const STATIONS_CACHE_MAX_ENTRIES = 50;
+
 const ROUTE_CORRIDOR_KM = 35;
 const ORIGIN_STATION_RADIUS_KM = 8;
 const ROUND = (value, decimals = 2) => Math.round(value * (10 ** decimals)) / (10 ** decimals);
+
+const withRetry = async (fn, { retries = 2, baseDelayMs = 300, label = 'routing' } = {}) => {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (!(error instanceof RoutingProviderError) || attempt >= retries) throw error;
+      console.warn(`${label}: intento ${attempt + 1} falló (${error.message}); reintentando…`);
+      await new Promise((r) => setTimeout(r, baseDelayMs * 2 ** attempt));
+    }
+  }
+};
 
 function haversineKm(a, b) {
   const toRad = Math.PI / 180;
@@ -16,6 +35,17 @@ function haversineKm(a, b) {
   const lat2 = b.latitud * toRad;
   const part = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
   return 6371 * 2 * Math.atan2(Math.sqrt(part), Math.sqrt(1 - part));
+}
+
+function mergeStations(primary, secondary) {
+  const merged = [...primary];
+  for (const candidate of secondary) {
+    const isDuplicate = primary.some(
+      (station) => haversineKm(station, candidate) <= DUPLICATE_DISTANCE_KM
+    );
+    if (!isDuplicate) merged.push(candidate);
+  }
+  return merged;
 }
 
 function projectStationOnRoute(station, coordinates) {
@@ -92,6 +122,7 @@ function formatStation(station, extra = {}) {
     distanciaAlTrazado_km: ROUND(extra.distanciaAlTrazadoKm ?? station.route?.distanceKm ?? station.distanceFromOriginKm ?? 0),
     esCargaInicial: Boolean(extra.esCargaInicial),
     fuente: station.fuente || 'SEC EcoCarga',
+    verificada: station.verificada ?? null,
     fechaActualizacion: station.fechaActualizacion || station.ultimaActualizacion || station.fechaRevision || '02/10/2026',
   };
 }
@@ -268,7 +299,44 @@ function resolveKnownCity(value, cities) {
   return city ? { nombre: city.nombre, latitud: city.latitud, longitud: city.longitud } : null;
 }
 
-function createRoutePlanningService({ providers = createRoutingProviders(), vehicles = defaultVehicles, stations = defaultStations, cities = defaultCities } = {}) {
+function createRoutePlanningService({
+  providers = createRoutingProviders(),
+  vehicles = defaultVehicles,
+  stations = defaultStations,
+  cities = defaultCities,
+  stationsSource = process.env.STATIONS_SOURCE || 'both',
+  ocm = openChargeMap,
+  cache = sharedStationsCache,
+} = {}) {
+  async function getStationsForRoute(coordinates, cacheKey) {
+    if (stationsSource === 'local') return { stations, warnings: [] };
+
+    let remote;
+    const cached = cache.get(cacheKey);
+    if (cached && Date.now() - cached.at < STATIONS_CACHE_TTL_MS) {
+      remote = cached.stations;
+    } else {
+      try {
+        remote = await ocm.fetchStationsAlongRoute(coordinates);
+        if (cache.size >= STATIONS_CACHE_MAX_ENTRIES) {
+          cache.delete(cache.keys().next().value); // descarta la entrada más antigua
+        }
+        cache.set(cacheKey, { at: Date.now(), stations: remote });
+      } catch (error) {
+        console.error('Open Charge Map falló:', error.message);
+        return {
+          stations,
+          warnings: ['No se pudo consultar Open Charge Map; se usaron solo las estaciones locales.'],
+        };
+      }
+    }
+
+    return {
+      stations: stationsSource === 'ocm' ? remote : mergeStations(stations, remote),
+      warnings: [],
+    };
+  }
+
   async function plan({ origin, destination, origen, destino, origenId, destinoId, vehiculoId, socInicial }) {
     const inputErrors = [];
     const originValue = origin || origen || origenId;
@@ -282,21 +350,35 @@ function createRoutePlanningService({ providers = createRoutingProviders(), vehi
     const vehicle = vehicles.find((item) => item.id === vehiculoId);
     if (!vehicle) return { exito: false, code: 'VEHICLE_NOT_FOUND', error: `Vehículo con ID '${vehiculoId}' no encontrado.` };
 
-    const resolvedOrigin = resolveKnownCity(originValue, cities) || await providers.geocode(`${originValue}, Chile`);
-    const resolvedDestination = resolveKnownCity(destinationValue, cities) || await providers.geocode(`${destinationValue}, Chile`);
+    const geocode = (query) => withRetry(() => providers.geocode(query), { label: 'geocode' });
+    const resolvedOrigin = resolveKnownCity(originValue, cities) || await geocode(`${originValue}, Chile`);
+    const resolvedDestination = resolveKnownCity(destinationValue, cities) || await geocode(`${destinationValue}, Chile`);
     if (resolvedOrigin.latitud === resolvedDestination.latitud && resolvedOrigin.longitud === resolvedDestination.longitud) {
       return { exito: false, code: 'VALIDATION_ERROR', error: 'El origen y el destino deben ser distintos.' };
     }
 
-    const directions = await providers.getDirections(resolvedOrigin, resolvedDestination);
+    const directions = await withRetry(
+      () => providers.getDirections(resolvedOrigin, resolvedDestination), { label: 'getDirections' }
+    );
     const totalDistanceKm = directions.distancia_m / 1000;
+
+    const cacheKey = [resolvedOrigin, resolvedDestination]
+      .map((p) => `${p.latitud.toFixed(3)},${p.longitud.toFixed(3)}`)
+      .join('|');
+
+    const { stations: routeStations, warnings: sourceWarnings } = await getStationsForRoute(
+      directions.geometry.coordinates,
+      cacheKey
+    );
+
     const candidateStations = buildCandidateStations({
-      stations,
+      stations: routeStations,
       vehicle,
       coordinates: directions.geometry.coordinates,
       totalDistanceKm,
     });
-    const originStations = buildOriginStations({ stations, vehicle, origin: resolvedOrigin });
+    const originStations = buildOriginStations({ stations: routeStations, vehicle, origin: resolvedOrigin });
+
     const calculation = calculateChargingPlan({
       vehicle,
       stations: candidateStations,
@@ -320,7 +402,7 @@ function createRoutePlanningService({ providers = createRoutingProviders(), vehi
       origen: resolvedOrigin,
       destino: resolvedDestination,
       geometry: directions.geometry,
-      advertencias: [...(calculation.advertencias || []), ...coverageWarning],
+      advertencias: [...(calculation.advertencias || []), ...sourceWarnings, ...coverageWarning],
       estacionesOrigenCompatibles: originStations.map((station) => ({
         id: station.id,
         nombre: station.nombre,
@@ -340,6 +422,7 @@ module.exports = {
   ROUTE_CORRIDOR_KM,
   RoutingProviderError,
   haversineKm,
+  mergeStations,
   projectStationOnRoute,
   buildCandidateStations,
   buildOriginStations,

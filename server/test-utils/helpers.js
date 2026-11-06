@@ -2,7 +2,7 @@ const { createStore } = require('../src/services/dataStore');
 const { createApp } = require('../src/index');
 const { createAuthService, signToken } = require('../src/services/authService');
 const seedVehicles = require('../src/data/vehicles.json');
-const seedStations = require('../src/data/stations.json');
+const seedStations = require('../src/data/stations.json'); //
 const { createLogger } = require('../src/services/logger');
 
 const TEST_JWT_SECRET = 'secreto-de-prueba';

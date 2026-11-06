@@ -1,3 +1,4 @@
+// catalog.api.tests
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { createTestApp, createAdminToken, withServer, request, registerUser } = require('../test-utils/helpers');

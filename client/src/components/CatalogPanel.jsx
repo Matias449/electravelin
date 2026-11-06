@@ -229,8 +229,12 @@ export default function CatalogPanel({ onRequireAuth }) {
                 return (
                   <li key={vehicle.id} className="list__item">
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <strong style={{ fontFamily: 'var(--font-heading)', fontSize: '1rem', color: '#fff' }}>
-                        {vehicle.marca} {vehicle.modelo}
+                      <strong
+                        className="station-list-item__name"
+                        style={{ fontFamily: 'var(--font-heading)', fontSize: '1rem', }}
+                      >
+                        {/* {vehicle.marca}  */}
+                        {vehicle.modelo}
                       </strong>
                       {vehicle.esPersonalizado && (
                         <span style={{
@@ -304,23 +308,34 @@ export default function CatalogPanel({ onRequireAuth }) {
               <StationsMap
                 estaciones={estaciones}
                 seleccionada={estacionSeleccionada}
-                onSelect={setEstacionSeleccionada}
+                onSelect={(station) => {
+                  setEstacionSeleccionada(
+                    String(estacionSeleccionada?.id) === String(station?.id) ? null : station
+                  );
+                }}
               />
             </section>
-            <ul className="list">
+            {/* <ul className="list"> */}
+            <ul className="list station-list-scroll">
               {estaciones.map((station) => {
                 const fav = esFavorito(station.id, 'estacion');
                 const equiposAgrupados = resumirEquipos(station.cargadores);
                 return (
-                  // <li key={station.id} className="list__item">
                   <li key={station.id} 
                     className={`list__item station-list-item ${
                       String(estacionSeleccionada?.id) === String(station.id) ? 'station-list-item--selected' : ''
                     }`}
-                    onClick={() => setEstacionSeleccionada(station)}
+                    onClick={() => {
+                      setEstacionSeleccionada(
+                        String(estacionSeleccionada?.id) === String(station.id) ? null : station
+                      );
+                    }}
                   >
                     <div>
-                      <strong style={{ fontFamily: 'var(--font-heading)', fontSize: '1rem', color: '#fff' }}>
+                      <strong
+                        className="station-list-item__name"
+                        style={{ fontFamily: 'var(--font-heading)', fontSize: '1rem', }}
+                      >
                         {station.nombre}
                       </strong>
                       <div className="list__meta" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.76rem', marginTop: 4 }}>

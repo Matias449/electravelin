@@ -15,9 +15,7 @@
 const vehicles = require('../data/vehicles.json');
 const stations = require('../data/stations.json');
 const mockRoutes = require('../data/mockRoutes.json');
-const {
-  calcularRutaOptima,
-} = require('../services/batteryService');
+const { calcularRutaOptima } = require('../services/batteryService');
 const { createRoutePlanningService, RoutingProviderError } = require('../services/routePlanningService');
 
 /**
