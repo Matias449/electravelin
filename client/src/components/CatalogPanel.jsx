@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import StationsMap from './StationsMap';
 import CustomVehicleModal from './CustomVehicleModal';
@@ -6,6 +6,7 @@ import * as api from '../utils/api';
 import { Search, Car, Zap, Star, Filter, ShieldCheck, MapPin, ExternalLink, Plus } from 'lucide-react';
 
 const CONECTORES = ['', 'CCS2', 'CHAdeMO'];
+const FILTROS_INICIALES = { texto: '', conector: '', potenciaMin: '' };
 
 const ETIQUETAS_ESTADO = {
   DISPONIBLE: 'disponibles',
@@ -42,7 +43,8 @@ function textoResumenEquipo(grupo) {
 export default function CatalogPanel({ onRequireAuth }) {
   const { usuario } = useAuth();
   const [tipo, setTipo] = useState('vehiculos');
-  const [filtros, setFiltros] = useState({ texto: '', conector: '', potenciaMin: '' });
+  const [filtrosPorTipo, setFiltrosPorTipo] = useState({ vehiculos: { ...FILTROS_INICIALES }, estaciones: { ...FILTROS_INICIALES }, });
+  const filtros = filtrosPorTipo[tipo];
   const [vehiculos, setVehiculos] = useState([]);
   const [estaciones, setEstaciones] = useState([]);
   const [favoritos, setFavoritos] = useState([]);
@@ -51,6 +53,7 @@ export default function CatalogPanel({ onRequireAuth }) {
   const [estacionSeleccionada, setEstacionSeleccionada] = useState(null);
   const [vehiculoId, setVehiculoId] = useState('');
   const [modalVehiculoOpen, setModalVehiculoOpen] = useState(false);
+  const listaEstacionesRef = useRef(null);
 
   useEffect(() => {
     function handleVehiclesUpdated() {
@@ -95,6 +98,33 @@ export default function CatalogPanel({ onRequireAuth }) {
     return () => { active = false; clearTimeout(timer); };
   }, [tipo, filtros, usuario, vehiculoId]);
 
+  useEffect(() => {
+    if (tipo !== 'estaciones' || !estacionSeleccionada) return;
+    const contenedor = listaEstacionesRef.current;
+    if (!contenedor) return;
+
+    const item = contenedor.querySelector(
+      `[data-station-id="${CSS.escape(String(estacionSeleccionada.id))}"]`
+    );
+    if (!item) return;
+
+    if (contenedor.scrollHeight > contenedor.clientHeight) {
+      const c = contenedor.getBoundingClientRect();
+      const i = item.getBoundingClientRect();
+      const destino = contenedor.scrollTop + (i.top - c.top) - (c.height / 2 - i.height / 2);
+      contenedor.scrollTo({ top: Math.max(0, destino), behavior: 'smooth' });
+    } else {
+      item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [estacionSeleccionada, tipo, estaciones]);
+
+  function actualizarFiltro(campo, valor) {
+    setFiltrosPorTipo((prev) => ({
+      ...prev,
+      [tipo]: { ...prev[tipo], [campo]: valor },
+    }));
+  }
+
   function esFavorito(referenciaId, tipoFavorito) {
     return favoritos.some((favorite) => favorite.referenciaId === referenciaId && favorite.tipo === tipoFavorito);
   }
@@ -118,6 +148,9 @@ export default function CatalogPanel({ onRequireAuth }) {
     }
   }
 
+  const totalResultados = tipo === 'vehiculos' ? vehiculos.length : estaciones.length;
+  const etiquetaResultados = totalResultados === 1 ? 'resultado' : 'resultados';
+
   return (
     <section className="panel" id="catalog-panel">
       <div className="card">
@@ -139,7 +172,7 @@ export default function CatalogPanel({ onRequireAuth }) {
             onClick={() => setTipo('vehiculos')}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
           >
-            <Car size={15} /> Vehículos ({vehiculos.length})
+            <Car size={15} /> Vehículos
           </button>
           <button
             type="button"
@@ -149,7 +182,7 @@ export default function CatalogPanel({ onRequireAuth }) {
             onClick={() => setTipo('estaciones')}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
           >
-            <Zap size={15} /> Electrolineras ({estaciones.length})
+            <Zap size={15} /> Electrolineras
           </button>
         </div>
 
@@ -158,16 +191,16 @@ export default function CatalogPanel({ onRequireAuth }) {
             className="form-input"
             placeholder={tipo === 'vehiculos' ? 'Buscar por marca o modelo…' : 'Dirección, comuna, región u operador…'}
             value={filtros.texto}
-            onChange={(event) => setFiltros({ ...filtros, texto: event.target.value })}
+            onChange={(event) => actualizarFiltro('texto', event.target.value)}
             aria-label="Texto de búsqueda"
           />
-          <select className="form-select" value={filtros.conector} onChange={(event) => setFiltros({ ...filtros, conector: event.target.value })} aria-label="Conector">
+          <select className="form-select" value={filtros.conector} onChange={(event) => actualizarFiltro('conector', event.target.value)} aria-label="Conector">
             <option value="">Todos los conectores</option>
             {CONECTORES.filter(Boolean).map((conector) => (
               <option key={conector} value={conector}>{conector}</option>
             ))}
           </select>
-          <select className="form-select" value={filtros.potenciaMin} onChange={(event) => setFiltros({ ...filtros, potenciaMin: event.target.value })} aria-label="Potencia mínima">
+          <select className="form-select" value={filtros.potenciaMin} onChange={(event) => actualizarFiltro('potenciaMin', event.target.value)} aria-label="Potencia mínima">
             <option value="">Potencia mínima</option>
             <option value="50">50+ kW (Rápida)</option>
             <option value="100">100+ kW (Ultra-rápida)</option>
@@ -182,7 +215,15 @@ export default function CatalogPanel({ onRequireAuth }) {
         </div>
 
         {error && <div className="error-banner error-banner--compact" role="alert">{error}</div>}
-        {cargando && <p className="form-helper">Consultando base de datos oficial…</p>}
+        {cargando ? (
+          <p className="form-helper">Consultando base de datos oficial…</p>
+        ) : (
+          !error && (
+            <p className="form-helper" aria-live="polite">
+              {totalResultados} {etiquetaResultados} {totalResultados === 1 ? 'encontrado' : 'encontrados'}
+            </p>
+          )
+        )}
 
         {tipo === 'vehiculos' && (
           <>
@@ -199,7 +240,7 @@ export default function CatalogPanel({ onRequireAuth }) {
               gap: 10,
             }}>
               <div>
-                <strong style={{ fontSize: '0.92rem', color: '#fff', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <strong style={{ fontSize: '0.92rem', color: "var(--text-secondary)", display: 'flex', alignItems: 'center', gap: 6 }}>
                   <Car size={16} color="var(--accent-cyan)" /> ¿No encuentras tu modelo de auto en el catálogo?
                 </strong>
                 <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
@@ -222,7 +263,7 @@ export default function CatalogPanel({ onRequireAuth }) {
               </button>
             </div>
 
-            <ul className="list">
+            <ul className="list catalog-list-scroll">
               {vehiculos.map((vehicle) => {
                 const fav = esFavorito(vehicle.id, 'vehiculo');
                 const modeloReferencial = vehicle.modelo3DTipo === 'referencial';
@@ -315,13 +356,14 @@ export default function CatalogPanel({ onRequireAuth }) {
                 }}
               />
             </section>
-            {/* <ul className="list"> */}
-            <ul className="list station-list-scroll">
+            <ul className="list catalog-list-scroll" ref={listaEstacionesRef}>
               {estaciones.map((station) => {
                 const fav = esFavorito(station.id, 'estacion');
                 const equiposAgrupados = resumirEquipos(station.cargadores);
                 return (
-                  <li key={station.id} 
+                  <li 
+                    key={station.id} 
+                    data-station-id={station.id}
                     className={`list__item station-list-item ${
                       String(estacionSeleccionada?.id) === String(station.id) ? 'station-list-item--selected' : ''
                     }`}
