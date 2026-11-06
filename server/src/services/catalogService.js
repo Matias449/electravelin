@@ -1,6 +1,5 @@
 // catalogService.js
-// const CONECTORES_VALIDOS = ['CCS2', 'CHAdeMO', 'Type 2'];
-const CONECTORES_VALIDOS = ['CCS2', 'CHAdeMO', 'Type 2', 'Type 1', 'CCS1', 'Tesla'];
+const CONECTORES_VALIDOS = ['CCS2', 'CHAdeMO', 'Type 2'];
 
 function normaliseText(value) {
   return String(value ?? '').trim().toLowerCase();
