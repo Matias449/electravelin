@@ -320,22 +320,10 @@ export default function RouteResults({ resultado, consulta, onRequireAuth }) {
       )}
 
       {/* Límites de la Estimación y Aviso Legal del Servicio (RF18 & RN07) */}
-      <div className="route-disclaimer" style={{
-        marginTop: 'var(--space-xl)',
-        padding: '14px 18px',
-        background: 'rgba(12, 18, 32, 0.7)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        borderRadius: 'var(--radius-md)',
-        fontSize: '0.8rem',
-        color: 'var(--text-secondary)',
-        lineHeight: 1.6,
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: 12
-      }}>
-        <AlertCircle size={18} color="#94a3b8" style={{ flexShrink: 0, marginTop: 2 }} />
+      <div className="route-disclaimer">
+        <AlertCircle size={18} className="route-disclaimer__icon" />
         <div>
-          <strong style={{ color: '#e2e8f0', display: 'block', marginBottom: 2 }}>
+          <strong className="route-disclaimer__title">
             Límites del Modelo y Estimación de Viaje (RF18, RN07):
           </strong>
           Los consumos energéticos, tiempos y costos presentados son cálculos de referencia basados en el consumo nominal del vehículo y tarifas oficiales registradas. La autonomía real puede variar por velocidad efectiva, topografía, uso de climatización y condiciones de tráfico. La recomendación de una estación no garantiza su disponibilidad física ni inicia una transacción de reserva con el operador.
