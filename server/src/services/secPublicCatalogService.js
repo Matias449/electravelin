@@ -1,3 +1,5 @@
+const { coincideBusqueda, normalizarTexto, tokenizar } = require('../utils/search');
+
 const DEFAULT_URL = 'https://cargadorespublicos.cl/api/data';
 const CACHE_MS = 2 * 60 * 1000;
 
@@ -97,11 +99,16 @@ function createSecPublicCatalogService({ fetchFn = global.fetch, url = DEFAULT_U
   }
 
   async function list({ vehicle, busqueda, region, conector, potenciaMin, incluirPrivadas = false } = {}) {
+    const terminos = tokenizar(busqueda);
+
     const locations = (await sourceData())
       .filter((location) => incluirPrivadas || !location.institucion_privada)
       .map(normalizeLocation)
-      .filter((station) => !busqueda || [station.nombre, station.direccion, station.comuna, station.region, station.operador].some((field) => String(field || '').toLowerCase().includes(String(busqueda).toLowerCase())))
-      .filter((station) => !region || String(station.region || '').toLowerCase().includes(String(region).toLowerCase()))
+      .filter((station) => coincideBusqueda(
+        [station.nombre, station.direccion, station.comuna, station.region, station.operador],
+        terminos
+      ))
+      .filter((station) => !region || normalizarTexto(station.region).includes(normalizarTexto(region)))
       .filter((station) => !conector || station.conectoresDisponibles.includes(conector))
       .filter((station) => !potenciaMin || Number(station.potenciaMaxima_kW) >= Number(potenciaMin));
 

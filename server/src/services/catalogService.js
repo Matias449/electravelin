@@ -1,19 +1,11 @@
 // catalogService.js
+const { tokenizar, coincideBusqueda, normalizarTexto } = require('../utils/search');
 const CONECTORES_VALIDOS = ['CCS2', 'CHAdeMO', 'Type 2'];
 
 function normaliseText(value) {
   return String(value ?? '').trim().toLowerCase();
 }
 
-function matchesAny(value, candidates) {
-  const normalised = normaliseText(value);
-  return candidates.some((candidate) => normalised.includes(normaliseText(candidate)));
-}
-
-// function toNumber(value) {
-//   const parsed = Number(value);
-//   return Number.isFinite(parsed) ? parsed : null;
-// }
 function toNumber(value) {
   if (value === null || value === undefined || value === '') return null;
   const parsed = Number(value);
@@ -122,6 +114,7 @@ function createCatalogService({ store } = {}) {
 
   function listVehicles(filters = {}) {
     const { marca, conector, bateriaMin, potenciaMin, incluirInactivos, incluirPersonalizados, userId } = filters;
+    const terminos = tokenizar(marca);
     return store
       .all('vehicles')
       .filter((vehicle) => incluirInactivos === true || vehicle.activo !== false)
@@ -131,7 +124,7 @@ function createCatalogService({ store } = {}) {
         if (userId && vehicle.userId === userId) return true;
         return false;
       })
-      .filter((vehicle) => !marca || normaliseText(vehicle.marca).includes(normaliseText(marca)))
+      .filter((vehicle) => coincideBusqueda([vehicle.marca, vehicle.modelo], terminos))
       .filter((vehicle) => !conector || vehicle.conectoresCompatibles?.includes(conector))
       .filter((vehicle) => !bateriaMin || Number(vehicle.bateriaUtilizable_kWh) >= Number(bateriaMin))
       .filter((vehicle) => !potenciaMin || Number(vehicle.potenciaCargaMaxima_kW) >= Number(potenciaMin))
@@ -140,14 +133,17 @@ function createCatalogService({ store } = {}) {
 
   function listStations(filters = {}) {
     const { ciudad, operador, conector, potenciaMin, region, busqueda, incluirNoDisponibles } = filters;
+    const terminos = tokenizar(busqueda);
     return store
       .all('stations')
       .filter((station) => incluirNoDisponibles === true || station.disponible !== false)
-      .filter((station) => !ciudad || normaliseText(station.ciudad).includes(normaliseText(ciudad)))
-      .filter((station) => !region || normaliseText(station.region).includes(normaliseText(region)))
-      .filter((station) => !operador || normaliseText(station.operador).includes(normaliseText(operador)))
-      .filter((station) => !busqueda || [station.nombre, station.ciudad, station.region, station.operador, station.direccion]
-        .some((field) => normaliseText(field).includes(normaliseText(busqueda))))
+      .filter((station) => !ciudad || normalizarTexto(station.ciudad).includes(normalizarTexto(ciudad)))
+      .filter((station) => !region || normalizarTexto(station.region).includes(normalizarTexto(region)))
+      .filter((station) => !operador || normalizarTexto(station.operador).includes(normalizarTexto(operador)))
+      .filter((station) => coincideBusqueda(
+        [station.nombre, station.direccion, station.comuna, station.ciudad, station.region, station.operador],
+        terminos
+      ))
       .filter((station) => !conector || station.conectoresDisponibles?.includes(conector))
       .filter((station) => !potenciaMin || Number(station.potenciaMaxima_kW) >= Number(potenciaMin))
       .sort((a, b) => String(a.ciudad ?? '').localeCompare(String(b.ciudad ?? ''), 'es-CL') || String(a.nombre ?? '').localeCompare(String(b.nombre ?? ''), 'es-CL'));
