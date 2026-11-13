@@ -1,5 +1,6 @@
 const DEFAULT_URL = 'https://cargadorespublicos.cl/api/data';
 const CACHE_MS = 2 * 60 * 1000;
+const { toIsoDate } = require('../utils/dateUtils');
 
 function normalizeConnector(value) {
   const name = String(value || '').trim().toLowerCase();
@@ -74,6 +75,8 @@ function normalizeLocation(location) {
     folioIRVE: location.folio_IRVE || null,
     datosIRVEConfirmados: Boolean(location.datos_IRVE_confirmados),
     actualizadoEn: location.last_updated || null,
+    fechaRevision: toIsoDate(location.last_updated),
+    fechaActualizacion: toIsoDate(location.last_updated),
     fuente: 'SEC / Plataforma de Interoperabilidad EcoCarga',
     urlFuente: 'https://cargadorespublicos.cl/',
     cargadores: chargers,

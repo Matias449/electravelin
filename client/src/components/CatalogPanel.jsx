@@ -3,7 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import StationsMap from './StationsMap';
 import CustomVehicleModal from './CustomVehicleModal';
 import * as api from '../utils/api';
-import { Search, Car, Zap, Star, Filter, ShieldCheck, MapPin, ExternalLink, Plus } from 'lucide-react';
+import { checkDataFreshness } from '../utils/stationFreshness';
+import { Search, Car, Zap, Star, Filter, ShieldCheck, MapPin, ExternalLink, Plus, AlertTriangle } from 'lucide-react';
 
 const CONECTORES = ['', 'CCS2', 'CHAdeMO'];
 const FILTROS_INICIALES = { texto: '', conector: '', potenciaMin: '' };
@@ -401,8 +402,33 @@ export default function CatalogPanel({ onRequireAuth }) {
                       ) : (
                         <div className="list__meta" style={{ marginTop: 6 }}>Dirección específica pendiente de verificación.</div>
                       )}
+                      {(() => {
+                        const freshness = checkDataFreshness(station.fechaRevision || station.fechaActualizacion || station.actualizadoEn || station.fechaVerificacionUbicacion);
+                        return (
+                          <>
+                            <div className="list__meta" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 5 }}>
+                              <span><strong>Fuente:</strong> {station.fuente || station.fuenteUbicacion || 'SEC / EcoCarga'}</span>
+                              <span><strong>Revisión:</strong> {freshness.fechaLegible}</span>
+                              {station.disponibilidad && (
+                                <span>Estado: <strong>{station.disponibilidad?.estado || 'SIN ESTADO'}</strong></span>
+                              )}
+                            </div>
+                            {freshness.desactualizada && (
+                              <div
+                                className="stop-card__freshness-warning"
+                                role="alert"
+                                aria-live="polite"
+                                style={{ marginTop: 6 }}
+                              >
+                                <AlertTriangle size={13} style={{ flexShrink: 0 }} aria-hidden="true" />
+                                <span>⚠️ Datos con más de 30 días sin revisión (podrían estar desactualizados)</span>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                       <div className="list__meta" style={{ marginTop: 4 }}>
-                        Estado SEC: <strong>{station.disponibilidad?.estado || 'SIN ESTADO'}</strong> · Disponibles: {station.disponibilidad?.disponibles ?? '—'} · Ocupados: {station.disponibilidad?.ocupados ?? '—'} · Actualizado: {station.actualizadoEn ? new Date(station.actualizadoEn).toLocaleString('es-CL') : 'sin hora'}
+                        Disponibles: {station.disponibilidad?.disponibles ?? '—'} · Ocupados: {station.disponibilidad?.ocupados ?? '—'}
                       </div>
                       {station.cargadores?.length > 0 && (
                         <div className="list__meta station-equipment-summary" style={{ marginTop: 7 }}>

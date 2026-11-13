@@ -1,4 +1,5 @@
 // catalogService.js
+const { toIsoDate } = require('../utils/dateUtils');
 const CONECTORES_VALIDOS = ['CCS2', 'CHAdeMO', 'Type 2'];
 
 function normaliseText(value) {
@@ -99,7 +100,7 @@ function validateStationInput(body, { partial = false } = {}) {
       errors.push(`El campo "${field}" no puede estar vacío.`);
     }
   }
-  for (const field of ['direccion', 'fuenteUbicacion', 'urlFuenteUbicacion']) {
+  for (const field of ['direccion', 'fuenteUbicacion', 'urlFuenteUbicacion', 'fuente', 'fechaRevision', 'fechaActualizacion']) {
     if (body[field] !== undefined && body[field] !== null && (typeof body[field] !== 'string' || body[field].trim() === '')) {
       errors.push(`El campo "${field}" debe ser texto no vacío o null.`);
     }
@@ -150,6 +151,16 @@ function createCatalogService({ store } = {}) {
         .some((field) => normaliseText(field).includes(normaliseText(busqueda))))
       .filter((station) => !conector || station.conectoresDisponibles?.includes(conector))
       .filter((station) => !potenciaMin || Number(station.potenciaMaxima_kW) >= Number(potenciaMin))
+      .map((station) => {
+        const rawDate = station.fechaRevision || station.fechaActualizacion || station.fechaVerificacionUbicacion || station.actualizadoEn;
+        const isoDate = toIsoDate(rawDate) || '2026-10-10';
+        return {
+          ...station,
+          fuente: station.fuente || station.fuenteUbicacion || 'SEC / EcoCarga',
+          fechaRevision: isoDate,
+          fechaActualizacion: isoDate,
+        };
+      })
       .sort((a, b) => String(a.ciudad ?? '').localeCompare(String(b.ciudad ?? ''), 'es-CL') || String(a.nombre ?? '').localeCompare(String(b.nombre ?? ''), 'es-CL'));
   }
 
@@ -208,6 +219,9 @@ function createCatalogService({ store } = {}) {
       region: body.region ? String(body.region).trim() : null,
       operador: String(body.operador).trim(),
       direccion: body.direccion ? String(body.direccion).trim() : null,
+      fuente: body.fuente ? String(body.fuente).trim() : (body.fuenteUbicacion ? String(body.fuenteUbicacion).trim() : 'SEC / EcoCarga'),
+      fechaRevision: toIsoDate(body.fechaRevision || body.fechaActualizacion) || new Date().toISOString().slice(0, 10),
+      fechaActualizacion: toIsoDate(body.fechaActualizacion || body.fechaRevision) || new Date().toISOString().slice(0, 10),
       fuenteUbicacion: body.fuenteUbicacion ? String(body.fuenteUbicacion).trim() : null,
       urlFuenteUbicacion: body.urlFuenteUbicacion ? String(body.urlFuenteUbicacion).trim() : null,
       ubicacionVerificada: body.ubicacionVerificada === true,
@@ -229,9 +243,11 @@ function createCatalogService({ store } = {}) {
     if (errors.length) return { error: { status: 400, mensaje: 'Errores de validación', detalles: errors } };
 
     const patch = {};
-    for (const field of ['nombre', 'ciudad', 'region', 'operador', 'tipoTarifa', 'direccion', 'fuenteUbicacion', 'urlFuenteUbicacion']) {
+    for (const field of ['nombre', 'ciudad', 'region', 'operador', 'tipoTarifa', 'direccion', 'fuenteUbicacion', 'urlFuenteUbicacion', 'fuente', 'fechaRevision', 'fechaActualizacion']) {
       if (body[field] !== undefined) patch[field] = body[field] === null ? null : String(body[field]).trim();
     }
+    if (patch.fechaRevision) patch.fechaRevision = toIsoDate(patch.fechaRevision);
+    if (patch.fechaActualizacion) patch.fechaActualizacion = toIsoDate(patch.fechaActualizacion);
     if (body.ciudadId !== undefined) patch.ciudadId = slugify(body.ciudadId);
     for (const field of ['latitud', 'longitud', 'potenciaMaxima_kW', 'tarifa_CLPporKWh']) {
       if (body[field] !== undefined) patch[field] = toNumber(body[field]);

@@ -1,6 +1,7 @@
 // routePlanningService.js
 const { calcularRecarga, encontrarConectorCompatible, RESERVA_SOC_MIN, OBJETIVO_CARGA_MAX } = require('./batteryService');
 const { createRoutingProviders, RoutingProviderError } = require('./routingProviders');
+const { toIsoDate } = require('../utils/dateUtils');
 const defaultVehicles = require('../data/vehicles.json');
 const defaultStations = require('../data/stations.json');
 const defaultCities = require('../data/mockRoutes.json').ciudades;
@@ -105,6 +106,15 @@ function buildOriginStations({ stations, vehicle, origin }) {
 }
 
 function formatStation(station, extra = {}) {
+  let isoDate = null;
+  if (station.fechaRevision !== null && station.fechaActualizacion !== null) {
+    const rawDate = station.fechaRevision || station.fechaActualizacion || station.ultimaActualizacion || station.fechaVerificacionUbicacion || station.actualizadoEn;
+    isoDate = toIsoDate(rawDate) || '2026-10-02';
+  } else {
+    const nonNullDate = station.fechaRevision || station.fechaActualizacion;
+    isoDate = nonNullDate ? toIsoDate(nonNullDate) : null;
+  }
+
   return {
     estacionId: station.id,
     estacionNombre: station.nombre,
@@ -123,7 +133,8 @@ function formatStation(station, extra = {}) {
     esCargaInicial: Boolean(extra.esCargaInicial),
     fuente: station.fuente || 'SEC EcoCarga',
     verificada: station.verificada ?? null,
-    fechaActualizacion: station.fechaActualizacion || station.ultimaActualizacion || station.fechaRevision || '02/10/2026',
+    fechaRevision: isoDate,
+    fechaActualizacion: isoDate,
   };
 }
 
@@ -403,15 +414,22 @@ function createRoutePlanningService({
       destino: resolvedDestination,
       geometry: directions.geometry,
       advertencias: [...(calculation.advertencias || []), ...sourceWarnings, ...coverageWarning],
-      estacionesOrigenCompatibles: originStations.map((station) => ({
-        id: station.id,
-        nombre: station.nombre,
-        ciudad: station.ciudad,
-        operador: station.operador,
-        conector: station.compatibleConnector,
-        potenciaMaxima_kW: station.potenciaMaxima_kW,
-        distanciaKm: ROUND(station.distanceFromOriginKm),
-      })),
+      estacionesOrigenCompatibles: originStations.map((station) => {
+        const rawDate = station.fechaRevision || station.fechaActualizacion || station.ultimaActualizacion || station.fechaVerificacionUbicacion || station.actualizadoEn;
+        const isoDate = toIsoDate(rawDate) || '2026-10-02';
+        return {
+          id: station.id,
+          nombre: station.nombre,
+          ciudad: station.ciudad,
+          operador: station.operador,
+          conector: station.compatibleConnector,
+          potenciaMaxima_kW: station.potenciaMaxima_kW,
+          distanciaKm: ROUND(station.distanceFromOriginKm),
+          fuente: station.fuente || 'SEC EcoCarga',
+          fechaRevision: isoDate,
+          fechaActualizacion: isoDate,
+        };
+      }),
     };
   }
 

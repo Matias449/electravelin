@@ -14,12 +14,18 @@
     "datosTecnicosVerificados": false,
     "latitud": -33.4444514,
     "longitud": -70.6372605,
-    "conectoresDisponibles": ["CCS2", "CHAdeMO"],
+    "conectoresDisponibles": [
+      "CCS2",
+      "CHAdeMO"
+    ],
     "potenciaMaxima_kW": 150,
     "tarifa_CLPporKWh": 250,
     "tipoTarifa": "CLP/kWh",
     "disponible": true,
-    "verificada": false
+    "verificada": false,
+    "fuente": "SEC / EcoCarga",
+    "fechaRevision": "2026-10-10",
+    "fechaActualizacion": "2026-10-10"
   },
   {
     "id": "sta_santiago_enelx",
@@ -36,12 +42,17 @@
     "datosTecnicosVerificados": false,
     "latitud": -33.3437169,
     "longitud": -70.7112073,
-    "conectoresDisponibles": ["CCS2"],
+    "conectoresDisponibles": [
+      "CCS2"
+    ],
     "potenciaMaxima_kW": 50,
     "tarifa_CLPporKWh": 240,
     "tipoTarifa": "CLP/kWh",
     "disponible": true,
-    "verificada": false
+    "verificada": false,
+    "fuente": "SEC / EcoCarga",
+    "fechaRevision": "2026-10-10",
+    "fechaActualizacion": "2026-10-10"
   },
   {
     "id": "sta_rancagua_enex",
@@ -58,12 +69,17 @@
     "datosTecnicosVerificados": false,
     "latitud": -34.1519733,
     "longitud": -70.7591975,
-    "conectoresDisponibles": ["CCS2"],
+    "conectoresDisponibles": [
+      "CCS2"
+    ],
     "potenciaMaxima_kW": 50,
     "tarifa_CLPporKWh": 280,
     "tipoTarifa": "CLP/kWh",
     "disponible": true,
-    "verificada": false
+    "verificada": false,
+    "fuente": "SEC / EcoCarga",
+    "fechaRevision": "2026-10-10",
+    "fechaActualizacion": "2026-10-10"
   },
   {
     "id": "sta_sanfernando_copec",
@@ -80,12 +96,17 @@
     "datosTecnicosVerificados": false,
     "latitud": -33.9799035,
     "longitud": -70.7121737,
-    "conectoresDisponibles": ["CCS2"],
+    "conectoresDisponibles": [
+      "CCS2"
+    ],
     "potenciaMaxima_kW": 100,
     "tarifa_CLPporKWh": 260,
     "tipoTarifa": "CLP/kWh",
     "disponible": true,
-    "verificada": false
+    "verificada": false,
+    "fuente": "SEC / EcoCarga",
+    "fechaRevision": "2026-10-10",
+    "fechaActualizacion": "2026-10-10"
   },
   {
     "id": "sta_curico_shell",
@@ -102,12 +123,18 @@
     "datosTecnicosVerificados": false,
     "latitud": -34.8238327,
     "longitud": -71.070162,
-    "conectoresDisponibles": ["CCS2", "CHAdeMO"],
+    "conectoresDisponibles": [
+      "CCS2",
+      "CHAdeMO"
+    ],
     "potenciaMaxima_kW": 100,
     "tarifa_CLPporKWh": 268,
     "tipoTarifa": "CLP/kWh",
     "disponible": true,
-    "verificada": false
+    "verificada": false,
+    "fuente": "SEC / EcoCarga",
+    "fechaRevision": "2026-10-10",
+    "fechaActualizacion": "2026-10-10"
   },
   {
     "id": "sta_talca_shell",
@@ -124,12 +151,18 @@
     "datosTecnicosVerificados": false,
     "latitud": -35.4264,
     "longitud": -71.6554,
-    "conectoresDisponibles": ["CCS2", "CHAdeMO"],
+    "conectoresDisponibles": [
+      "CCS2",
+      "CHAdeMO"
+    ],
     "potenciaMaxima_kW": 150,
     "tarifa_CLPporKWh": 270,
     "tipoTarifa": "CLP/kWh",
     "disponible": true,
-    "verificada": false
+    "verificada": false,
+    "fuente": "SEC / EcoCarga",
+    "fechaRevision": "2026-10-10",
+    "fechaActualizacion": "2026-10-10"
   },
   {
     "id": "sta_linares_enex",
@@ -146,12 +179,17 @@
     "datosTecnicosVerificados": false,
     "latitud": -36.218814,
     "longitud": -71.8172333,
-    "conectoresDisponibles": ["CCS2"],
+    "conectoresDisponibles": [
+      "CCS2"
+    ],
     "potenciaMaxima_kW": 60,
     "tarifa_CLPporKWh": 285,
     "tipoTarifa": "CLP/kWh",
     "disponible": true,
-    "verificada": false
+    "verificada": false,
+    "fuente": "SEC / EcoCarga",
+    "fechaRevision": "2026-10-10",
+    "fechaActualizacion": "2026-10-10"
   },
   {
     "id": "sta_chillan_copec",
@@ -168,12 +206,17 @@
     "datosTecnicosVerificados": false,
     "latitud": -36.3700082,
     "longitud": -71.8913049,
-    "conectoresDisponibles": ["CCS2"],
+    "conectoresDisponibles": [
+      "CCS2"
+    ],
     "potenciaMaxima_kW": 100,
     "tarifa_CLPporKWh": 255,
     "tipoTarifa": "CLP/kWh",
     "disponible": true,
-    "verificada": false
+    "verificada": false,
+    "fuente": "SEC / EcoCarga",
+    "fechaRevision": "2026-10-10",
+    "fechaActualizacion": "2026-10-10"
   },
   {
     "id": "sta_concepcion_copec",
@@ -190,12 +233,18 @@
     "datosTecnicosVerificados": false,
     "latitud": -36.8247707,
     "longitud": -73.0410711,
-    "conectoresDisponibles": ["CCS2", "CHAdeMO"],
+    "conectoresDisponibles": [
+      "CCS2",
+      "CHAdeMO"
+    ],
     "potenciaMaxima_kW": 150,
     "tarifa_CLPporKWh": 258,
     "tipoTarifa": "CLP/kWh",
     "disponible": true,
-    "verificada": false
+    "verificada": false,
+    "fuente": "SEC / EcoCarga",
+    "fechaRevision": "2026-10-10",
+    "fechaActualizacion": "2026-10-10"
   },
   {
     "id": "sta_losangeles_enex",
@@ -212,12 +261,18 @@
     "datosTecnicosVerificados": false,
     "latitud": -38.2339494,
     "longitud": -72.3316568,
-    "conectoresDisponibles": ["CCS2", "CHAdeMO"],
+    "conectoresDisponibles": [
+      "CCS2",
+      "CHAdeMO"
+    ],
     "potenciaMaxima_kW": 60,
     "tarifa_CLPporKWh": 290,
     "tipoTarifa": "CLP/kWh",
     "disponible": true,
-    "verificada": false
+    "verificada": false,
+    "fuente": "SEC / EcoCarga",
+    "fechaRevision": "2026-10-10",
+    "fechaActualizacion": "2026-10-10"
   },
   {
     "id": "sta_temuco_copec",
@@ -234,12 +289,17 @@
     "datosTecnicosVerificados": false,
     "latitud": -38.7383707,
     "longitud": -72.6313321,
-    "conectoresDisponibles": ["CCS2"],
+    "conectoresDisponibles": [
+      "CCS2"
+    ],
     "potenciaMaxima_kW": 150,
     "tarifa_CLPporKWh": 265,
     "tipoTarifa": "CLP/kWh",
     "disponible": true,
-    "verificada": false
+    "verificada": false,
+    "fuente": "SEC / EcoCarga",
+    "fechaRevision": "2026-10-10",
+    "fechaActualizacion": "2026-10-10"
   },
   {
     "id": "sta_temuco_shell",
@@ -256,12 +316,18 @@
     "datosTecnicosVerificados": false,
     "latitud": -38.7409765,
     "longitud": -72.6036364,
-    "conectoresDisponibles": ["CCS2", "CHAdeMO"],
+    "conectoresDisponibles": [
+      "CCS2",
+      "CHAdeMO"
+    ],
     "potenciaMaxima_kW": 100,
     "tarifa_CLPporKWh": 275,
     "tipoTarifa": "CLP/kWh",
     "disponible": true,
-    "verificada": false
+    "verificada": false,
+    "fuente": "SEC / EcoCarga",
+    "fechaRevision": "2026-10-10",
+    "fechaActualizacion": "2026-10-10"
   },
   {
     "id": "sta_villarrica_enex",
@@ -278,12 +344,17 @@
     "datosTecnicosVerificados": false,
     "latitud": -36.6230032,
     "longitud": -72.1317093,
-    "conectoresDisponibles": ["CCS2"],
+    "conectoresDisponibles": [
+      "CCS2"
+    ],
     "potenciaMaxima_kW": 60,
     "tarifa_CLPporKWh": 292,
     "tipoTarifa": "CLP/kWh",
     "disponible": true,
-    "verificada": false
+    "verificada": false,
+    "fuente": "SEC / EcoCarga",
+    "fechaRevision": "2026-10-10",
+    "fechaActualizacion": "2026-10-10"
   },
   {
     "id": "sta_valdivia_shell",
@@ -300,12 +371,18 @@
     "datosTecnicosVerificados": false,
     "latitud": -39.8104923,
     "longitud": -73.2544642,
-    "conectoresDisponibles": ["CCS2", "CHAdeMO"],
+    "conectoresDisponibles": [
+      "CCS2",
+      "CHAdeMO"
+    ],
     "potenciaMaxima_kW": 100,
     "tarifa_CLPporKWh": 275,
     "tipoTarifa": "CLP/kWh",
     "disponible": true,
-    "verificada": false
+    "verificada": false,
+    "fuente": "SEC / EcoCarga",
+    "fechaRevision": "2026-10-10",
+    "fechaActualizacion": "2026-10-10"
   },
   {
     "id": "sta_osorno_copec",
@@ -316,13 +393,18 @@
     "operador": "Copec Voltex",
     "latitud": -40.5739,
     "longitud": -73.1336,
-    "conectoresDisponibles": ["CCS2"],
+    "conectoresDisponibles": [
+      "CCS2"
+    ],
     "potenciaMaxima_kW": 100,
     "tarifa_CLPporKWh": 272,
     "tipoTarifa": "CLP/kWh",
     "disponible": true,
     "verificada": false,
-    "datosTecnicosVerificados": false
+    "datosTecnicosVerificados": false,
+    "fuente": "SEC / EcoCarga",
+    "fechaRevision": "2026-10-10",
+    "fechaActualizacion": "2026-10-10"
   },
   {
     "id": "sta_puertomontt_copec",
@@ -339,12 +421,17 @@
     "datosTecnicosVerificados": false,
     "latitud": -41.4561595,
     "longitud": -72.9303269,
-    "conectoresDisponibles": ["CCS2"],
+    "conectoresDisponibles": [
+      "CCS2"
+    ],
     "potenciaMaxima_kW": 100,
     "tarifa_CLPporKWh": 270,
     "tipoTarifa": "CLP/kWh",
     "disponible": true,
-    "verificada": false
+    "verificada": false,
+    "fuente": "SEC / EcoCarga",
+    "fechaRevision": "2026-10-10",
+    "fechaActualizacion": "2026-10-10"
   },
   {
     "id": "sta_puertomontt_enelx",
@@ -355,12 +442,18 @@
     "operador": "Enel X Way",
     "latitud": -41.4747,
     "longitud": -72.9365,
-    "conectoresDisponibles": ["CCS2", "CHAdeMO"],
+    "conectoresDisponibles": [
+      "CCS2",
+      "CHAdeMO"
+    ],
     "potenciaMaxima_kW": 50,
     "tarifa_CLPporKWh": 260,
     "tipoTarifa": "CLP/kWh",
     "disponible": true,
     "verificada": false,
-    "datosTecnicosVerificados": false
+    "datosTecnicosVerificados": false,
+    "fuente": "SEC / EcoCarga",
+    "fechaRevision": "2026-10-10",
+    "fechaActualizacion": "2026-10-10"
   }
 ]

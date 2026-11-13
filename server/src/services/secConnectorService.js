@@ -15,6 +15,8 @@
  * =============================================================================
  */
 
+const { toIsoDate } = require('../utils/dateUtils');
+
 const CHILE_BOUNDS = {
   minLat: -56.0,
   maxLat: -17.5,
@@ -131,7 +133,9 @@ function validateRawStation(raw) {
       tipoTarifa: raw.tipoTarifa || 'CLP/kWh',
       disponible: raw.disponible !== false,
       verificada: Boolean(raw.verificada ?? true),
-      fuente: 'SEC / EcoCarga',
+      fuente: raw.fuente || 'SEC / EcoCarga',
+      fechaRevision: toIsoDate(raw.fechaRevision || raw.fechaActualizacion || raw.fechaVerificacionUbicacion) || new Date().toISOString().slice(0, 10),
+      fechaActualizacion: toIsoDate(raw.fechaActualizacion || raw.fechaRevision || raw.fechaVerificacionUbicacion) || new Date().toISOString().slice(0, 10),
     } : null,
   };
 }
