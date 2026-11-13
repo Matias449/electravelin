@@ -34,6 +34,7 @@ function createRoutingProviders({
     let response;
     try {
       response = await fetchImpl(url, {
+        signal: AbortSignal.timeout(10000),
         headers: {
           Accept: 'application/json',
           'User-Agent': nominatimUserAgent,
@@ -73,6 +74,7 @@ function createRoutingProviders({
         `${normaliseBaseUrl(orsBaseUrl)}/v2/directions/driving-car/geojson`,
         {
           method: 'POST',
+          signal: AbortSignal.timeout(10000),
           headers: {
             Authorization: orsApiKey,
             'Content-Type': 'application/json',
@@ -116,7 +118,10 @@ function createRoutingProviders({
     const url = `${normaliseBaseUrl(osrmBaseUrl)}/route/v1/driving/${coordinates}?overview=full&geometries=geojson&steps=false`;
     let response;
     try {
-      response = await fetchImpl(url, { headers: { Accept: 'application/json' } });
+      response = await fetchImpl(url, {
+        signal: AbortSignal.timeout(10000),
+        headers: { Accept: 'application/json' },
+      });
     } catch (error) {
       throw new RoutingProviderError('No fue posible contactar al servicio de ruteo OSRM.', 'osrm', error);
     }

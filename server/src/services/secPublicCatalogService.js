@@ -90,7 +90,10 @@ function createSecPublicCatalogService({ fetchFn = global.fetch, url = DEFAULT_U
 
   async function sourceData() {
     if (cache && now() - cachedAt < CACHE_MS) return cache;
-    const response = await fetchFn(url, { headers: { Accept: 'application/json' } });
+    const response = await fetchFn(url, {
+      signal: AbortSignal.timeout(10000),
+      headers: { Accept: 'application/json' },
+    });
     if (!response.ok) throw new Error(`SEC_ECOCARGA_HTTP_${response.status}`);
     const parsed = await response.json();
     if (!Array.isArray(parsed)) throw new Error('SEC_ECOCARGA_INVALID_RESPONSE');
