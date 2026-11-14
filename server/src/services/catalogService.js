@@ -105,6 +105,9 @@ function validateStationInput(body, { partial = false } = {}) {
       errors.push(`El campo "${field}" debe ser texto no vacío o null.`);
     }
   }
+  for (const field of ['fechaRevision', 'fechaActualizacion']) {
+    if (typeof body[field] === 'string' && body[field].trim() && !toIsoDate(body[field])) errors.push(`El campo ${field} debe ser una fecha válida.`);
+  }
   if (body.disponible !== undefined && typeof body.disponible !== 'boolean') {
     errors.push('El campo "disponible" debe ser booleano.');
   }
@@ -152,13 +155,12 @@ function createCatalogService({ store } = {}) {
       .filter((station) => !conector || station.conectoresDisponibles?.includes(conector))
       .filter((station) => !potenciaMin || Number(station.potenciaMaxima_kW) >= Number(potenciaMin))
       .map((station) => {
-        const rawDate = station.fechaRevision || station.fechaActualizacion || station.fechaVerificacionUbicacion || station.actualizadoEn;
-        const isoDate = toIsoDate(rawDate) || '2026-10-10';
+
         return {
           ...station,
-          fuente: station.fuente || station.fuenteUbicacion || 'SEC / EcoCarga',
-          fechaRevision: isoDate,
-          fechaActualizacion: isoDate,
+          fuente: station.fuente || null,
+          fechaRevision: toIsoDate(station.fechaRevision),
+          fechaActualizacion: toIsoDate(station.fechaActualizacion),
         };
       })
       .sort((a, b) => String(a.ciudad ?? '').localeCompare(String(b.ciudad ?? ''), 'es-CL') || String(a.nombre ?? '').localeCompare(String(b.nombre ?? ''), 'es-CL'));
@@ -219,9 +221,9 @@ function createCatalogService({ store } = {}) {
       region: body.region ? String(body.region).trim() : null,
       operador: String(body.operador).trim(),
       direccion: body.direccion ? String(body.direccion).trim() : null,
-      fuente: body.fuente ? String(body.fuente).trim() : (body.fuenteUbicacion ? String(body.fuenteUbicacion).trim() : 'SEC / EcoCarga'),
-      fechaRevision: toIsoDate(body.fechaRevision || body.fechaActualizacion) || new Date().toISOString().slice(0, 10),
-      fechaActualizacion: toIsoDate(body.fechaActualizacion || body.fechaRevision) || new Date().toISOString().slice(0, 10),
+      fuente: body.fuente ? String(body.fuente).trim() : null,
+      fechaRevision: toIsoDate(body.fechaRevision),
+      fechaActualizacion: toIsoDate(body.fechaActualizacion),
       fuenteUbicacion: body.fuenteUbicacion ? String(body.fuenteUbicacion).trim() : null,
       urlFuenteUbicacion: body.urlFuenteUbicacion ? String(body.urlFuenteUbicacion).trim() : null,
       ubicacionVerificada: body.ubicacionVerificada === true,

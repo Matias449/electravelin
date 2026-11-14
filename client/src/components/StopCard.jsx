@@ -197,13 +197,13 @@ export default function StopCard({
 
       {/* Metadatos oficiales de procedencia, fecha de revisión y alerta de obsolescencia (CR-01, RF17 & RF10) */}
       {(() => {
-        const freshness = checkDataFreshness(parada.fechaRevision || parada.fechaActualizacion);
+        const freshness = checkDataFreshness(parada.fechaRevision);
         return (
           <div className="stop-card__provenance" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: 6 }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                 <ShieldCheck size={13} color="#10b981" aria-hidden="true" />
-                <span><strong>Fuente:</strong> {parada.fuente || 'SEC / EcoCarga'}</span>
+                <span><strong>Fuente:</strong> {parada.fuente || 'No informada'}</span>
               </span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                 <Calendar size={13} color="#94a3b8" aria-hidden="true" />
@@ -218,7 +218,7 @@ export default function StopCard({
                 aria-live="polite"
               >
                 <AlertTriangle size={14} style={{ flexShrink: 0 }} aria-hidden="true" />
-                <span>⚠️ Datos con más de 30 días sin revisión (podrían estar desactualizados)</span>
+                <span>{freshness.alerta}</span>
               </div>
             )}
           </div>

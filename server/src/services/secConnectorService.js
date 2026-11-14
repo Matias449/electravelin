@@ -133,9 +133,9 @@ function validateRawStation(raw) {
       tipoTarifa: raw.tipoTarifa || 'CLP/kWh',
       disponible: raw.disponible !== false,
       verificada: Boolean(raw.verificada ?? true),
-      fuente: raw.fuente || 'SEC / EcoCarga',
-      fechaRevision: toIsoDate(raw.fechaRevision || raw.fechaActualizacion || raw.fechaVerificacionUbicacion) || new Date().toISOString().slice(0, 10),
-      fechaActualizacion: toIsoDate(raw.fechaActualizacion || raw.fechaRevision || raw.fechaVerificacionUbicacion) || new Date().toISOString().slice(0, 10),
+      fuente: raw.fuente || null,
+      fechaRevision: toIsoDate(raw.fechaRevision),
+      fechaActualizacion: toIsoDate(raw.fechaActualizacion),
     } : null,
   };
 }

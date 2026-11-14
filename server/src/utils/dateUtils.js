@@ -29,8 +29,9 @@ function parseDateSafe(value) {
       const day = ddmmyyyy[1].padStart(2, '0');
       const month = ddmmyyyy[2].padStart(2, '0');
       const year = ddmmyyyy[3];
-      const d = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
-      return Number.isNaN(d.getTime()) ? null : d;
+      const iso = `${year}-${month}-${day}`;
+      const d = new Date(`${iso}T00:00:00.000Z`);
+      return Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== iso ? null : d;
     }
 
     // Formato YYYY-MM-DD
@@ -39,10 +40,17 @@ function parseDateSafe(value) {
       const year = yyyymmdd[1];
       const month = yyyymmdd[2].padStart(2, '0');
       const day = yyyymmdd[3].padStart(2, '0');
-      const d = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
-      return Number.isNaN(d.getTime()) ? null : d;
+      const iso = `${year}-${month}-${day}`;
+      const d = new Date(`${iso}T00:00:00.000Z`);
+      return Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== iso ? null : d;
     }
 
+    // Rechazar fechas ISO cuyo día no existe, incluso con hora.
+    const prefix = trimmed.match(/^(\d{4}-\d{2}-\d{2})(?:T|\s)/);
+    if (prefix) {
+      const dateOnly = new Date(`${prefix[1]}T00:00:00.000Z`);
+      if (Number.isNaN(dateOnly.getTime()) || dateOnly.toISOString().slice(0, 10) !== prefix[1]) return null;
+    }
     // Cualquier otro string ISO
     const parsed = new Date(trimmed);
     return Number.isNaN(parsed.getTime()) ? null : parsed;
@@ -74,7 +82,7 @@ function checkDataFreshness(fechaRevision, fechaActual = new Date()) {
       diasTranscurridos: null,
       desactualizada: true,
       fechaLegible: 'Sin fecha registrada',
-      alerta: ALERTA_OBSOLESCENCIA,
+      alerta: '⚠️ Fecha de revisión no disponible; los datos podrían estar desactualizados',
     };
   }
 
@@ -87,7 +95,7 @@ function checkDataFreshness(fechaRevision, fechaActual = new Date()) {
     diasTranscurridos,
     desactualizada,
     fechaLegible: formatDateLegible(dRevision),
-    alerta: desactualizada ? ALERTA_OBSOLESCENCIA : null,
+    alerta: diasTranscurridos < 0 ? '⚠️ Fecha de revisión futura; verifica los datos' : (desactualizada ? ALERTA_OBSOLESCENCIA : null),
   };
 }
 

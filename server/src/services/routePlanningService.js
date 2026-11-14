@@ -106,15 +106,6 @@ function buildOriginStations({ stations, vehicle, origin }) {
 }
 
 function formatStation(station, extra = {}) {
-  let isoDate = null;
-  if (station.fechaRevision !== null && station.fechaActualizacion !== null) {
-    const rawDate = station.fechaRevision || station.fechaActualizacion || station.ultimaActualizacion || station.fechaVerificacionUbicacion || station.actualizadoEn;
-    isoDate = toIsoDate(rawDate) || '2026-10-02';
-  } else {
-    const nonNullDate = station.fechaRevision || station.fechaActualizacion;
-    isoDate = nonNullDate ? toIsoDate(nonNullDate) : null;
-  }
-
   return {
     estacionId: station.id,
     estacionNombre: station.nombre,
@@ -131,10 +122,10 @@ function formatStation(station, extra = {}) {
     longitud: station.longitud,
     distanciaAlTrazado_km: ROUND(extra.distanciaAlTrazadoKm ?? station.route?.distanceKm ?? station.distanceFromOriginKm ?? 0),
     esCargaInicial: Boolean(extra.esCargaInicial),
-    fuente: station.fuente || 'SEC EcoCarga',
+    fuente: station.fuente || null,
     verificada: station.verificada ?? null,
-    fechaRevision: isoDate,
-    fechaActualizacion: isoDate,
+    fechaRevision: toIsoDate(station.fechaRevision),
+    fechaActualizacion: toIsoDate(station.fechaActualizacion),
   };
 }
 
@@ -415,8 +406,6 @@ function createRoutePlanningService({
       geometry: directions.geometry,
       advertencias: [...(calculation.advertencias || []), ...sourceWarnings, ...coverageWarning],
       estacionesOrigenCompatibles: originStations.map((station) => {
-        const rawDate = station.fechaRevision || station.fechaActualizacion || station.ultimaActualizacion || station.fechaVerificacionUbicacion || station.actualizadoEn;
-        const isoDate = toIsoDate(rawDate) || '2026-10-02';
         return {
           id: station.id,
           nombre: station.nombre,
@@ -425,9 +414,9 @@ function createRoutePlanningService({
           conector: station.compatibleConnector,
           potenciaMaxima_kW: station.potenciaMaxima_kW,
           distanciaKm: ROUND(station.distanceFromOriginKm),
-          fuente: station.fuente || 'SEC EcoCarga',
-          fechaRevision: isoDate,
-          fechaActualizacion: isoDate,
+          fuente: station.fuente || null,
+          fechaRevision: toIsoDate(station.fechaRevision),
+          fechaActualizacion: toIsoDate(station.fechaActualizacion),
         };
       }),
     };

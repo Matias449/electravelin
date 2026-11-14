@@ -122,6 +122,7 @@ test('RF17, RF10 & RN06: conserva metadatos de fuente, fecha y maneja tarifa des
   assert.equal(result.exito, true);
   assert.equal(result.paradas[0].fuente, 'SEC EcoCarga Oficial');
   assert.equal(result.paradas[0].fechaActualizacion, '2026-10-05');
+  assert.equal(result.paradas[0].fechaRevision, null);
   assert.equal(result.paradas[0].costo_CLP, null);
   assert.equal(result.resumen.costoIncompleto, true);
   assert.ok(result.advertencias.some((w) => /tarifa informada/i.test(w)));

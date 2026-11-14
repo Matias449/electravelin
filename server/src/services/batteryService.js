@@ -237,9 +237,9 @@ function calcularRutaOptima(vehiculo, tramos, estaciones, socInicial) {
           costo_CLP: recarga.costo_CLP,
           latitud: estacion.latitud,
           longitud: estacion.longitud,
-          fuente: estacion.fuente || 'SEC / EcoCarga',
-          fechaRevision: toIsoDate(estacion.fechaRevision || estacion.fechaActualizacion) || '2026-10-02',
-          fechaActualizacion: toIsoDate(estacion.fechaActualizacion || estacion.fechaRevision) || '2026-10-02',
+          fuente: estacion.fuente || null,
+          fechaRevision: toIsoDate(estacion.fechaRevision),
+          fechaActualizacion: toIsoDate(estacion.fechaActualizacion),
         });
 
         tiempoCargaTotal_min += recarga.tiempoCarga_min;

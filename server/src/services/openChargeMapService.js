@@ -53,8 +53,8 @@ function normalizeStation(poi) {
       ? 'Operador desconocido'
       : operatorTitle;
 
-  const rawDate = poi.DateLastStatusUpdate || poi.DateLastVerified || poi.DateCreated || null;
-  const isoDate = toIsoDate(rawDate);
+  const fechaRevision = toIsoDate(poi.DateLastVerified);
+  const fechaActualizacion = toIsoDate(poi.DateLastStatusUpdate);
 
   // No inventamos la tarifa ni la potencia si la API no las informa.
   return {
@@ -73,8 +73,8 @@ function normalizeStation(poi) {
     disponible: poi.StatusType?.IsOperational !== false,
     verificada: false,
     fuente: 'Open Charge Map',
-    fechaRevision: isoDate,
-    fechaActualizacion: isoDate,
+    fechaRevision,
+    fechaActualizacion,
     costoInformado: poi.UsageCost || null, // está en la raíz del POI
   };
 }

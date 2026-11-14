@@ -155,7 +155,7 @@ export default function RouteMap({
         ? `$${parada.costo_CLP.toLocaleString('es-CL')} CLP`
         : 'Tarifa no informada';
 
-      const freshness = checkDataFreshness(parada.fechaRevision || parada.fechaActualizacion);
+      const freshness = checkDataFreshness(parada.fechaRevision);
 
       const popupContent = `
         <div style="font-family: 'Inter', sans-serif; font-size: 12px; color: #e2e8f0; min-width: 190px;">
@@ -175,14 +175,14 @@ export default function RouteMap({
             <div>Costo: <strong>${costoTexto}</strong></div>
           </div>
           <div style="font-size: 11px; color: #94a3b8; margin-bottom: 2px;">
-            <strong>Fuente:</strong> ${escapeHtml(parada.fuente || 'SEC / EcoCarga')}
+            <strong>Fuente:</strong> ${escapeHtml(parada.fuente || 'No informada')}
           </div>
           <div style="font-size: 11px; color: #94a3b8; margin-bottom: 6px;">
             <strong>Revisión:</strong> ${escapeHtml(freshness.fechaLegible)}
           </div>
           ${freshness.desactualizada ? `
             <div class="map-popup__freshness-warning" role="alert" style="font-size: 10px; font-weight: 600; line-height: 1.35; padding: 5px 8px; border-radius: 4px; margin-bottom: 8px;">
-              ⚠️ Datos con más de 30 días sin revisión (podrían estar desactualizados)
+              ${escapeHtml(freshness.alerta)}
             </div>
           ` : ''}
           <button

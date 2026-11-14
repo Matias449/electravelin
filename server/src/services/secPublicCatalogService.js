@@ -75,7 +75,7 @@ function normalizeLocation(location) {
     folioIRVE: location.folio_IRVE || null,
     datosIRVEConfirmados: Boolean(location.datos_IRVE_confirmados),
     actualizadoEn: location.last_updated || null,
-    fechaRevision: toIsoDate(location.last_updated),
+    fechaRevision: null,
     fechaActualizacion: toIsoDate(location.last_updated),
     fuente: 'SEC / Plataforma de Interoperabilidad EcoCarga',
     urlFuente: 'https://cargadorespublicos.cl/',

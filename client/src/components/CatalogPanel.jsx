@@ -403,11 +403,11 @@ export default function CatalogPanel({ onRequireAuth }) {
                         <div className="list__meta" style={{ marginTop: 6 }}>Dirección específica pendiente de verificación.</div>
                       )}
                       {(() => {
-                        const freshness = checkDataFreshness(station.fechaRevision || station.fechaActualizacion || station.actualizadoEn || station.fechaVerificacionUbicacion);
+                        const freshness = checkDataFreshness(station.fechaRevision);
                         return (
                           <>
                             <div className="list__meta" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 5 }}>
-                              <span><strong>Fuente:</strong> {station.fuente || station.fuenteUbicacion || 'SEC / EcoCarga'}</span>
+                              <span><strong>Fuente:</strong> {station.fuente || 'No informada'}</span>
                               <span><strong>Revisión:</strong> {freshness.fechaLegible}</span>
                               {station.disponibilidad && (
                                 <span>Estado: <strong>{station.disponibilidad?.estado || 'SIN ESTADO'}</strong></span>
@@ -421,7 +421,7 @@ export default function CatalogPanel({ onRequireAuth }) {
                                 style={{ marginTop: 6 }}
                               >
                                 <AlertTriangle size={13} style={{ flexShrink: 0 }} aria-hidden="true" />
-                                <span>⚠️ Datos con más de 30 días sin revisión (podrían estar desactualizados)</span>
+                                <span>{freshness.alerta}</span>
                               </div>
                             )}
                           </>

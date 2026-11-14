@@ -58,7 +58,7 @@ test('CR-01: Estación sin fecha válida o nula se maneja de forma segura sin ex
     assert.doesNotThrow(() => {
       const res = checkDataFreshness(entrada, fechaActual);
       assert.equal(res.desactualizada, true);
-      assert.equal(res.alerta, ALERTA_OBSOLESCENCIA);
+      assert.match(res.alerta, /Fecha de revisión no disponible/);
       assert.equal(res.diasTranscurridos, null);
       assert.equal(res.fechaLegible, 'Sin fecha registrada');
     });
@@ -81,9 +81,9 @@ test('CR-01: Endpoint /api/estaciones expone fuente y fechaRevision normalizadas
     assert.equal(res.status, 200);
     assert.ok(res.body.estaciones.length > 0);
     for (const station of res.body.estaciones) {
-      assert.ok(typeof station.fuente === 'string' && station.fuente.length > 0, `Estación ${station.id} debe tener fuente`);
-      assert.match(station.fechaRevision, /^\d{4}-\d{2}-\d{2}$/, `Estación ${station.id} debe tener fechaRevision en ISO YYYY-MM-DD`);
-      assert.match(station.fechaActualizacion, /^\d{4}-\d{2}-\d{2}$/, `Estación ${station.id} debe tener fechaActualizacion en ISO YYYY-MM-DD`);
+      assert.equal(station.fuente, null);
+      assert.equal(station.fechaRevision, null);
+      assert.equal(station.fechaActualizacion, null);
     }
   });
 });
@@ -103,10 +103,66 @@ test('CR-01: Planificación de ruta expone fuente y fechaRevision normalizadas e
     assert.equal(res.status, 200);
     if (res.body.paradas?.length > 0) {
       for (const parada of res.body.paradas) {
-        assert.ok(typeof parada.fuente === 'string' && parada.fuente.length > 0);
-        assert.match(parada.fechaRevision, /^\d{4}-\d{2}-\d{2}$/);
-        assert.match(parada.fechaActualizacion, /^\d{4}-\d{2}-\d{2}$/);
+        assert.equal(parada.fuente, null);
+        assert.equal(parada.fechaRevision, null);
+        assert.equal(parada.fechaActualizacion, null);
       }
     }
   });
+});
+
+
+test('CR-01: rechaza fechas imposibles y distingue fechas futuras', () => {
+  for (const date of ['31/02/2026', '2026-02-31', '2026-02-31T12:00:00Z']) assert.equal(toIsoDate(date), null);
+  assert.equal(toIsoDate('2024-02-29'), '2024-02-29');
+  assert.match(checkDataFreshness('2026-12-01', new Date('2026-11-14T12:00:00Z')).alerta, /futura/);
+});
+
+test('CR-01: SEC conserva actualización sin inventar revisión', async () => {
+  const { createSecPublicCatalogService } = require('../src/services/secPublicCatalogService');
+  const entries = [
+    { location_id: '1', name: 'Carga Central', commune: 'Ñuñoa', OPC: { name: 'Copec Voltex' }, last_updated: '2026-11-10T12:00:00Z' },
+    { location_id: '2', name: 'Carga Norte', commune: 'Providencia', OPC: { name: 'Otro' } },
+  ];
+  const service = createSecPublicCatalogService({ fetchFn: async () => ({ ok: true, json: async () => entries }) });
+  const stations = await service.list({ busqueda: 'Ñuñoa' });
+  assert.equal(stations.length, 1);
+  assert.equal(stations[0].fuente, 'SEC / Plataforma de Interoperabilidad EcoCarga');
+  assert.equal(stations[0].fechaRevision, null);
+  assert.equal(stations[0].fechaActualizacion, '2026-11-10');
+  assert.match(checkDataFreshness(stations[0].fechaRevision).alerta, /no disponible/);
+  assert.equal((await service.list({ busqueda: 'inexistente' })).length, 0);
+});
+
+test('CR-01: OCM distingue revisión de actualización y no usa fecha de creación', () => {
+  const { normalizeStation } = require('../src/services/openChargeMapService');
+  const base = { ID: 42, AddressInfo: {}, DateLastStatusUpdate: '2026-11-10T12:00:00Z', DateCreated: '2020-01-01T00:00:00Z' };
+  const station = normalizeStation(base);
+  assert.equal(station.fechaRevision, null);
+  assert.equal(station.fechaActualizacion, '2026-11-10');
+  assert.equal(normalizeStation({ ...base, DateLastVerified: '2026-10-03T00:00:00Z' }).fechaRevision, '2026-10-03');
+});
+
+test('CR-01: catálogo local conserva metadatos desconocidos', async () => {
+  const { app } = createTestApp();
+  await withServer(app, async (base) => {
+    const res = await request(base, '/api/estaciones?busqueda=Portugal%20175');
+    assert.equal(res.status, 200);
+    assert.ok(res.body.estaciones.length > 0);
+    for (const station of res.body.estaciones) {
+      assert.match(station.direccion, /Portugal 175/);
+      assert.equal(station.fuente, null);
+      assert.equal(station.fechaRevision, null);
+    }
+  });
+});
+
+test('CR-01: el frontend distingue fecha inválida, futura y ausente', async () => {
+  const { checkDataFreshness: ui } = await import('../../client/src/utils/stationFreshness.js');
+  const now = new Date('2026-11-14T12:00:00Z');
+  assert.match(ui('31/02/2026', now).alerta, /no disponible/);
+  assert.match(ui(null, now).alerta, /no disponible/);
+  assert.match(ui('2026-12-01', now).alerta, /futura/);
+  assert.equal(ui('2026-11-10', now).alerta, null);
+  assert.match(ui('2026-10-01', now).alerta, /más de 30 días/);
 });
