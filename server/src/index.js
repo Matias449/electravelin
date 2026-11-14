@@ -12,6 +12,8 @@ const { createAccountController } = require('./controllers/accountController');
 const { createCatalogController } = require('./controllers/catalogController');
 const { createCityController } = require('./controllers/cityController');
 const { createStore } = require('./services/dataStore');
+const { createSupabaseStore } = require('./services/supabaseStore');
+const { createPersistenceGate } = require('./middleware/persistence');
 const { createLogger } = require('./services/logger');
 const { createAuthService } = require('./services/authService');
 const { createAuditService } = require('./services/auditService');
@@ -67,13 +69,26 @@ function ensureBootstrapAdmin(store, authService, logger) {
 
 function createApp({ routePlanner, store, jwtSecret, logger, rateLimits, stationsSeed, secPublicCatalogService } = {}) {
   const log = logger || createLogger();
-  const dataStore = store || createStore({
-    filePath: resolveDataFile(),
-    seed: { vehicles: seedVehicles, stations: stationsSeed || seedStations },
-  });
+  const hasUrl = Boolean(process.env.SUPABASE_URL);
+  const hasKey = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+  if (!store && hasUrl !== hasKey) throw new Error('La configuración de Supabase está incompleta.');
+  const usaSupabase = !store && hasUrl && hasKey;
+  const dataStore = store || (usaSupabase ? createSupabaseStore({
+    url: process.env.SUPABASE_URL, serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    seed: { vehicles: seedVehicles, stations: stationsSeed || seedStations }, logger: log,
+  }) : createStore({ filePath: resolveDataFile(), seed: { vehicles: seedVehicles, stations: stationsSeed || seedStations } }));
+  const persistencia = store ? (store.persistencia || 'memoria') : (usaSupabase ? 'supabase' : 'archivo');
 
   const authService = createAuthService({ store: dataStore, jwtSecret: jwtSecret || resolveJwtSecret(log) });
-  ensureBootstrapAdmin(dataStore, authService, log);
+  let adminInicialListo = false;
+  function asegurarAdminInicial() {
+    if (adminInicialListo) return;
+    ensureBootstrapAdmin(dataStore, authService, log);
+    adminInicialListo = true;
+  }
+  if (typeof dataStore.ready === 'function') {
+    dataStore.ready().then(asegurarAdminInicial).catch((error) => log.error('almacen_carga_inicial_fallida', { message: error.message }));
+  } else asegurarAdminInicial();
 
   const auditService = createAuditService({ store: dataStore });
   const catalogService = createCatalogService({ store: dataStore });
@@ -99,6 +114,7 @@ function createApp({ routePlanner, store, jwtSecret, logger, rateLimits, station
   if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
   app.use(cors({ origin: resolveCorsOrigin() }));
   app.use(createRequestContext({ logger: log }));
+  app.use(createPersistenceGate({ dataStore, onReady: asegurarAdminInicial, logger: log }));
 
   // Autenticación: cuerpo pequeño y límite de intentos por IP.
   app.use('/api/auth', express.json({ limit: '16kb' }), authLimiter, createAuthRoutes({ accountController, authMiddleware }));
@@ -120,17 +136,19 @@ function createApp({ routePlanner, store, jwtSecret, logger, rateLimits, station
     });
   });
 
-  app.get('/api/ready', (req, res) => {
+  app.get('/api/ready', async (req, res) => {
     try {
+      if (typeof dataStore.ready === 'function') { await dataStore.ready(); asegurarAdminInicial(); }
       dataStore.all('vehicles');
       const checks = {
         almacen: 'ok',
+        persistencia,
         ruteoConfigurado: Boolean(process.env.ORS_API_KEY),
       };
       return res.status(200).json({ status: 'ready', checks, requestId: req.requestId });
     } catch (error) {
       log.error('ready_check_failed', { requestId: req.requestId, message: error.message });
-      return res.status(503).json({ status: 'unavailable', checks: { almacen: 'error' }, requestId: req.requestId });
+      return res.status(503).json({ status: 'unavailable', checks: { almacen: 'error', persistencia }, requestId: req.requestId });
     }
   });
 
