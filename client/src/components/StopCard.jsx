@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import ConnectorBlueprint from './ConnectorBlueprint';
+import { checkDataFreshness } from '../utils/stationFreshness';
 import {
   Zap,
   Clock,
@@ -9,7 +10,8 @@ import {
   MapPin,
   ShieldCheck,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  AlertTriangle
 } from 'lucide-react';
 
 /**
@@ -193,15 +195,35 @@ export default function StopCard({
         />
       )}
 
-      {/* Metadatos oficiales de procedencia y fecha (RF17 & RF10) */}
-      <div className="stop-card__provenance">
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-          <ShieldCheck size={12} color="#10b981" /> Fuente: {parada.fuente || 'SEC / EcoCarga'}
-        </span>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-          <Calendar size={12} color="#94a3b8" /> Revisión: {parada.fechaActualizacion || '02/10/2026'}
-        </span>
-      </div>
+      {/* Metadatos oficiales de procedencia, fecha de revisión y alerta de obsolescencia (CR-01, RF17 & RF10) */}
+      {(() => {
+        const freshness = checkDataFreshness(parada.fechaRevision);
+        return (
+          <div className="stop-card__provenance" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: 6 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                <ShieldCheck size={13} color="#10b981" aria-hidden="true" />
+                <span><strong>Fuente:</strong> {parada.fuente || 'No informada'}</span>
+              </span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                <Calendar size={13} color="#94a3b8" aria-hidden="true" />
+                <span><strong>Revisión:</strong> {freshness.fechaLegible}</span>
+              </span>
+            </div>
+
+            {freshness.desactualizada && (
+              <div
+                className="stop-card__freshness-warning"
+                role="alert"
+                aria-live="polite"
+              >
+                <AlertTriangle size={14} style={{ flexShrink: 0 }} aria-hidden="true" />
+                <span>{freshness.alerta}</span>
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }

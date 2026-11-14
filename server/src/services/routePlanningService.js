@@ -1,6 +1,7 @@
 // routePlanningService.js
 const { calcularRecarga, encontrarConectorCompatible, RESERVA_SOC_MIN, OBJETIVO_CARGA_MAX } = require('./batteryService');
 const { createRoutingProviders, RoutingProviderError } = require('./routingProviders');
+const { toIsoDate } = require('../utils/dateUtils');
 const defaultVehicles = require('../data/vehicles.json');
 const defaultStations = require('../data/stations.json');
 const defaultCities = require('../data/mockRoutes.json').ciudades;
@@ -121,9 +122,10 @@ function formatStation(station, extra = {}) {
     longitud: station.longitud,
     distanciaAlTrazado_km: ROUND(extra.distanciaAlTrazadoKm ?? station.route?.distanceKm ?? station.distanceFromOriginKm ?? 0),
     esCargaInicial: Boolean(extra.esCargaInicial),
-    fuente: station.fuente || 'SEC EcoCarga',
+    fuente: station.fuente || null,
     verificada: station.verificada ?? null,
-    fechaActualizacion: station.fechaActualizacion || station.ultimaActualizacion || station.fechaRevision || '02/10/2026',
+    fechaRevision: toIsoDate(station.fechaRevision),
+    fechaActualizacion: toIsoDate(station.fechaActualizacion),
   };
 }
 
@@ -403,15 +405,20 @@ function createRoutePlanningService({
       destino: resolvedDestination,
       geometry: directions.geometry,
       advertencias: [...(calculation.advertencias || []), ...sourceWarnings, ...coverageWarning],
-      estacionesOrigenCompatibles: originStations.map((station) => ({
-        id: station.id,
-        nombre: station.nombre,
-        ciudad: station.ciudad,
-        operador: station.operador,
-        conector: station.compatibleConnector,
-        potenciaMaxima_kW: station.potenciaMaxima_kW,
-        distanciaKm: ROUND(station.distanceFromOriginKm),
-      })),
+      estacionesOrigenCompatibles: originStations.map((station) => {
+        return {
+          id: station.id,
+          nombre: station.nombre,
+          ciudad: station.ciudad,
+          operador: station.operador,
+          conector: station.compatibleConnector,
+          potenciaMaxima_kW: station.potenciaMaxima_kW,
+          distanciaKm: ROUND(station.distanceFromOriginKm),
+          fuente: station.fuente || null,
+          fechaRevision: toIsoDate(station.fechaRevision),
+          fechaActualizacion: toIsoDate(station.fechaActualizacion),
+        };
+      }),
     };
   }
 

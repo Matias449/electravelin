@@ -114,7 +114,8 @@ test('RF09 & PR-015: deduplica registros de la misma estación y fusiona conecto
   assert.equal(merged.operador, 'Copec Voltex');
   assert.equal(merged.potenciaMaxima_kW, 150);
   assert.deepEqual(merged.conectoresDisponibles.sort(), ['CCS2', 'CHAdeMO'].sort());
-  assert.equal(merged.fuente, 'SEC / EcoCarga');
+  assert.equal(merged.fuente, null);
+  assert.equal(merged.fechaRevision, null);
 });
 
 test('RF10 & PR-014: ingesta atómica conserva datos previos si la importación falla', () => {

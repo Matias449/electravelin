@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { checkDataFreshness } from '../utils/stationFreshness';
 
 function escapeHtml(value) {
   return String(value || '').replace(/[&<>'"]/g, (character) => ({
@@ -154,6 +155,8 @@ export default function RouteMap({
         ? `$${parada.costo_CLP.toLocaleString('es-CL')} CLP`
         : 'Tarifa no informada';
 
+      const freshness = checkDataFreshness(parada.fechaRevision);
+
       const popupContent = `
         <div style="font-family: 'Inter', sans-serif; font-size: 12px; color: #e2e8f0; min-width: 190px;">
           <div style="font-size: 10px; color: #10b981; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">
@@ -171,9 +174,17 @@ export default function RouteMap({
             <div>Potencia: <strong>${parada.potenciaEfectiva_kW} kW</strong></div>
             <div>Costo: <strong>${costoTexto}</strong></div>
           </div>
-          <div style="font-size: 10px; color: #64748b; margin-bottom: 8px;">
-            Fuente: ${escapeHtml(parada.fuente || 'SEC EcoCarga')} (${escapeHtml(parada.fechaActualizacion || '02/10/2026')})
+          <div style="font-size: 11px; color: #94a3b8; margin-bottom: 2px;">
+            <strong>Fuente:</strong> ${escapeHtml(parada.fuente || 'No informada')}
           </div>
+          <div style="font-size: 11px; color: #94a3b8; margin-bottom: 6px;">
+            <strong>Revisión:</strong> ${escapeHtml(freshness.fechaLegible)}
+          </div>
+          ${freshness.desactualizada ? `
+            <div class="map-popup__freshness-warning" role="alert" style="font-size: 10px; font-weight: 600; line-height: 1.35; padding: 5px 8px; border-radius: 4px; margin-bottom: 8px;">
+              ${escapeHtml(freshness.alerta)}
+            </div>
+          ` : ''}
           <button
             type="button"
             class="btn btn--primary btn--small"

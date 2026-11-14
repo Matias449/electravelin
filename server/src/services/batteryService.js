@@ -22,6 +22,7 @@
 
 const RESERVA_SOC_MIN = 15;   // RN02: SoC mínimo de seguridad (%)
 const OBJETIVO_CARGA_MAX = 80; // RN04: Objetivo de carga preferido (%)
+const { toIsoDate } = require('../utils/dateUtils');
 
 /**
  * Calcula la energía consumida en un tramo dado.
@@ -236,8 +237,9 @@ function calcularRutaOptima(vehiculo, tramos, estaciones, socInicial) {
           costo_CLP: recarga.costo_CLP,
           latitud: estacion.latitud,
           longitud: estacion.longitud,
-          fuente: estacion.fuente || 'SEC / EcoCarga',
-          fechaActualizacion: estacion.fechaActualizacion || '2026-10-02',
+          fuente: estacion.fuente || null,
+          fechaRevision: toIsoDate(estacion.fechaRevision),
+          fechaActualizacion: toIsoDate(estacion.fechaActualizacion),
         });
 
         tiempoCargaTotal_min += recarga.tiempoCarga_min;

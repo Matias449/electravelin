@@ -1,4 +1,5 @@
 // openChargeMapService.js
+const { toIsoDate } = require('../utils/dateUtils');
 // const BASE_URL = process.env.OPEN_CHARGE_MAP_BASE_URL || 'https://api.openchargemap.io/v3/poi';
 // const API_KEY = process.env.OPEN_CHARGE_MAP_API_KEY;
 
@@ -52,6 +53,9 @@ function normalizeStation(poi) {
       ? 'Operador desconocido'
       : operatorTitle;
 
+  const fechaRevision = toIsoDate(poi.DateLastVerified);
+  const fechaActualizacion = toIsoDate(poi.DateLastStatusUpdate);
+
   // No inventamos la tarifa ni la potencia si la API no las informa.
   return {
     id: `ocm_${poi.ID}`,
@@ -69,7 +73,8 @@ function normalizeStation(poi) {
     disponible: poi.StatusType?.IsOperational !== false,
     verificada: false,
     fuente: 'Open Charge Map',
-    fechaActualizacion: poi.DateLastStatusUpdate || null,
+    fechaRevision,
+    fechaActualizacion,
     costoInformado: poi.UsageCost || null, // está en la raíz del POI
   };
 }
