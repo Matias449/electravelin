@@ -8,6 +8,7 @@ import ProfilePanel from './components/ProfilePanel';
 import AdminPanel from './components/AdminPanel';
 import AuthPanel from './components/AuthPanel';
 import LandingHero from './components/LandingHero';
+import BackToTop from './components/BackToTop';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 const VISTA_POR_RUTA = {
@@ -129,6 +130,7 @@ function AppContent() {
         </nav>
         <p className="footer__legal">Los cálculos son estimaciones de referencia. Verifica el estado de cada estación antes de viajar.</p>
       </footer>
+      <BackToTop />
     </div>
   );
 }
