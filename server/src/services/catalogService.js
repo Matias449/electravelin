@@ -78,6 +78,9 @@ function validateStationInput(body, { partial = false } = {}) {
     }
     if (field === 'latitud' && (value < -56 || value > -17)) errors.push('La latitud debe estar dentro de Chile continental.');
     if (field === 'longitud' && (value < -76 || value > -66)) errors.push('La longitud debe estar dentro de Chile continental.');
+    // RF08: una estación con potencia cero o negativa no puede recomendarse.
+    if (field === 'potenciaMaxima_kW' && value <= 0) errors.push('El campo "potenciaMaxima_kW" debe ser un número mayor a 0.');
+    if (field === 'tarifa_CLPporKWh' && value < 0) errors.push('El campo "tarifa_CLPporKWh" no puede ser negativo.');
   }
 
   if (body.conectoresDisponibles !== undefined) {

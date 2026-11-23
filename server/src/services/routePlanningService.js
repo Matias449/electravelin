@@ -83,9 +83,19 @@ function projectStationOnRoute(station, coordinates) {
   return best;
 }
 
+// RF08: solo se recomiendan estaciones con ubicación válida y potencia mayor a cero.
+function isUsableStation(station) {
+  return Boolean(station.disponible)
+    && Number(station.potenciaMaxima_kW) > 0
+    && Number.isFinite(Number(station.latitud))
+    && Number.isFinite(Number(station.longitud))
+    && station.latitud !== null
+    && station.longitud !== null;
+}
+
 function buildCandidateStations({ stations, vehicle, coordinates, totalDistanceKm }) {
   return stations
-    .filter((station) => station.disponible)
+    .filter(isUsableStation)
     .map((station) => ({
       ...station,
       compatibleConnector: encontrarConectorCompatible(vehicle.conectoresCompatibles, station.conectoresDisponibles),
@@ -98,7 +108,7 @@ function buildCandidateStations({ stations, vehicle, coordinates, totalDistanceK
 
 function buildOriginStations({ stations, vehicle, origin }) {
   return stations
-    .filter((station) => station.disponible)
+    .filter(isUsableStation)
     .map((station) => ({
       ...station,
       compatibleConnector: encontrarConectorCompatible(vehicle.conectoresCompatibles, station.conectoresDisponibles),
