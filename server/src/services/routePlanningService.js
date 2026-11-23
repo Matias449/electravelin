@@ -353,7 +353,7 @@ function createRoutePlanningService({
     };
   }
 
-  async function plan({ origin, destination, origen, destino, origenId, destinoId, vehiculoId, socInicial }) {
+  async function plan({ origin, destination, origen, destino, origenId, destinoId, vehiculoId, socInicial, usuarioId = null }) {
     const inputErrors = [];
     const originValue = origin || origen || origenId;
     const destinationValue = destination || destino || destinoId;
@@ -363,7 +363,8 @@ function createRoutePlanningService({
     if (!Number.isFinite(socInicial) || socInicial < 0 || socInicial > 100) inputErrors.push('El campo "socInicial" debe ser un número entre 0 y 100.');
     if (inputErrors.length) return { exito: false, code: 'VALIDATION_ERROR', error: inputErrors.join(' ') };
 
-    const vehicle = vehicles.find((item) => item.id === vehiculoId);
+    // RF31: un vehículo propio solo lo puede usar su dueño.
+    const vehicle = vehicles.find((item) => item.id === vehiculoId && (!item.esPersonalizado || (usuarioId && item.userId === usuarioId)));
     if (!vehicle) return { exito: false, code: 'VEHICLE_NOT_FOUND', error: `Vehículo con ID '${vehiculoId}' no encontrado.` };
 
     const geocode = (query) => withRetry(() => providers.geocode(query), { label: 'geocode' });

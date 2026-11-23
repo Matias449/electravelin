@@ -83,7 +83,8 @@ export async function fetchCiudades() {
 }
 
 export async function calcularRuta(params) {
-  return request('/routes/plan', { method: 'POST', body: params });
+  // Se envía la sesión si existe, para poder usar los vehículos propios (RF31).
+  return request('/routes/plan', { method: 'POST', body: params, auth: true });
 }
 
 // ─── Cuenta ────────────────────────────────────────────────────────────────

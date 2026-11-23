@@ -192,6 +192,7 @@ test('planificación de ruta funciona correctamente con el vehículo personaliza
     // Planificar ruta con este vehículo
     const planRes = await request(baseUrl, '/api/routes/plan', {
       method: 'POST',
+      token,
       body: {
         origen: 'Santiago',
         destino: 'Rancagua',
@@ -206,5 +207,29 @@ test('planificación de ruta funciona correctamente con el vehículo personaliza
     assert.equal(planRes.body.vehiculo.modelo, 'EV6 Long Range');
     assert.equal(planRes.body.vehiculo.bateriaUtilizable_kWh, 77.4);
     assert.ok(planRes.body.resumen);
+  });
+});
+
+test('RF31 y PR-043: otra cuenta o una visita sin sesión no pueden planificar con un vehículo propio ajeno', async () => {
+  const { app } = createTestApp();
+  await withServer(app, async (baseUrl) => {
+    const duena = await registerUser(baseUrl, { email: 'duena@ev.cl' });
+    const otra = await registerUser(baseUrl, { email: 'otra@ev.cl' });
+    const creado = await request(baseUrl, '/api/mis-vehiculos', {
+      method: 'POST',
+      token: duena.body.token,
+      body: { marca: 'Prueba', modelo: 'Privado', bateriaUtilizable_kWh: 60, consumoReferencia_kWhPor100km: 16, potenciaCargaMaxima_kW: 100, conectoresCompatibles: ['CCS2'] },
+    });
+    const body = { origen: 'Santiago', destino: 'Rancagua', vehiculoId: creado.body.vehiculo.id, socInicial: 80 };
+
+    const ajena = await request(baseUrl, '/api/routes/plan', { method: 'POST', token: otra.body.token, body });
+    assert.equal(ajena.status, 404);
+    assert.equal(ajena.body.code, 'VEHICLE_NOT_FOUND');
+
+    const anonima = await request(baseUrl, '/api/routes/plan', { method: 'POST', body });
+    assert.equal(anonima.status, 404);
+
+    const suplantada = await request(baseUrl, '/api/routes/plan', { method: 'POST', token: otra.body.token, body: { ...body, usuarioId: duena.body.usuario?.id } });
+    assert.equal(suplantada.status, 404);
   });
 });
