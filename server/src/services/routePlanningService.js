@@ -125,9 +125,10 @@ function formatStation(station, extra = {}) {
     longitud: station.longitud,
     distanciaAlTrazado_km: ROUND(extra.distanciaAlTrazadoKm ?? station.route?.distanceKm ?? station.distanceFromOriginKm ?? 0),
     esCargaInicial: Boolean(extra.esCargaInicial),
-    fuente: station.fuente || null,
+    // CR-01: en el catálogo local la fuente y la revisión vienen de la verificación de ubicación.
+    fuente: station.fuente || station.fuenteUbicacion || null,
     verificada: station.verificada ?? null,
-    fechaRevision: toIsoDate(station.fechaRevision),
+    fechaRevision: toIsoDate(station.fechaRevision || station.fechaVerificacionUbicacion),
     fechaActualizacion: toIsoDate(station.fechaActualizacion),
   };
 }

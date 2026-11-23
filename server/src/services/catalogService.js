@@ -154,8 +154,9 @@ function createCatalogService({ store } = {}) {
 
         return {
           ...station,
-          fuente: station.fuente || null,
-          fechaRevision: toIsoDate(station.fechaRevision),
+          // CR-01: en el catálogo local la fuente y la revisión vienen de la verificación de ubicación.
+          fuente: station.fuente || station.fuenteUbicacion || null,
+          fechaRevision: toIsoDate(station.fechaRevision || station.fechaVerificacionUbicacion),
           fechaActualizacion: toIsoDate(station.fechaActualizacion),
         };
       })
