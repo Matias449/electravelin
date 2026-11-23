@@ -81,8 +81,8 @@ test('CR-01: Endpoint /api/estaciones expone fuente y fechaRevision normalizadas
     assert.equal(res.status, 200);
     assert.ok(res.body.estaciones.length > 0);
     for (const station of res.body.estaciones) {
-      assert.equal(station.fuente, null);
-      assert.equal(station.fechaRevision, null);
+      assert.equal(station.fuente, station.fuenteUbicacion || null);
+      assert.equal(station.fechaRevision, station.fechaVerificacionUbicacion || null);
       assert.equal(station.fechaActualizacion, null);
     }
   });
@@ -103,8 +103,8 @@ test('CR-01: Planificación de ruta expone fuente y fechaRevision normalizadas e
     assert.equal(res.status, 200);
     if (res.body.paradas?.length > 0) {
       for (const parada of res.body.paradas) {
-        assert.equal(parada.fuente, null);
-        assert.equal(parada.fechaRevision, null);
+        assert.ok(parada.fuente === null || typeof parada.fuente === 'string');
+        assert.ok(parada.fechaRevision === null || /^\d{4}-\d{2}-\d{2}$/.test(parada.fechaRevision));
         assert.equal(parada.fechaActualizacion, null);
       }
     }
@@ -143,7 +143,7 @@ test('CR-01: OCM distingue revisión de actualización y no usa fecha de creaci�
   assert.equal(normalizeStation({ ...base, DateLastVerified: '2026-10-03T00:00:00Z' }).fechaRevision, '2026-10-03');
 });
 
-test('CR-01: catálogo local conserva metadatos desconocidos', async () => {
+test('CR-01: catálogo local informa la fuente y la fecha de verificación de la ubicación', async () => {
   const { app } = createTestApp();
   await withServer(app, async (base) => {
     const res = await request(base, '/api/estaciones?busqueda=Portugal%20175');
@@ -151,6 +151,19 @@ test('CR-01: catálogo local conserva metadatos desconocidos', async () => {
     assert.ok(res.body.estaciones.length > 0);
     for (const station of res.body.estaciones) {
       assert.match(station.direccion, /Portugal 175/);
+      assert.equal(station.fuente, station.fuenteUbicacion);
+      assert.equal(station.fechaRevision, '2026-10-10');
+    }
+  });
+});
+
+test('CR-01: una estación del catálogo local sin datos de ubicación sigue sin fuente ni fecha', async () => {
+  const { app } = createTestApp();
+  await withServer(app, async (base) => {
+    const res = await request(base, '/api/estaciones?busqueda=Osorno');
+    assert.equal(res.status, 200);
+    const local = res.body.estaciones.filter((s) => s.id === 'sta_osorno_copec');
+    for (const station of local) {
       assert.equal(station.fuente, null);
       assert.equal(station.fechaRevision, null);
     }
@@ -188,6 +201,6 @@ test('CR-01 y filtro: múltiples palabras, tildes y metadatos conviven', async (
     const res = await request(base, '/api/estaciones?busqueda=175%20portugal');
     assert.equal(res.status, 200);
     assert.ok(res.body.estaciones.length > 0);
-    assert.ok(res.body.estaciones.every((s) => s.direccion.includes('Portugal 175') && s.fechaRevision === null));
+    assert.ok(res.body.estaciones.every((s) => s.direccion.includes('Portugal 175') && s.fechaRevision === '2026-10-10'));
   });
 });

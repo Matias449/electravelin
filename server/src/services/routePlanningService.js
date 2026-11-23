@@ -14,6 +14,9 @@ const STATIONS_CACHE_MAX_ENTRIES = 50;
 
 const ROUTE_CORRIDOR_KM = 35;
 const ORIGIN_STATION_RADIUS_KM = 8;
+// RN02: el destino debe alcanzarse con batería estrictamente superior a la reserva.
+const MARGEN_DESTINO_SOC = 1;
+
 const ROUND = (value, decimals = 2) => Math.round(value * (10 ** decimals)) / (10 ** decimals);
 
 const withRetry = async (fn, { retries = 2, baseDelayMs = 300, label = 'routing' } = {}) => {
@@ -80,9 +83,19 @@ function projectStationOnRoute(station, coordinates) {
   return best;
 }
 
+// RF08: solo se recomiendan estaciones con ubicación válida y potencia mayor a cero.
+function isUsableStation(station) {
+  return Boolean(station.disponible)
+    && Number(station.potenciaMaxima_kW) > 0
+    && Number.isFinite(Number(station.latitud))
+    && Number.isFinite(Number(station.longitud))
+    && station.latitud !== null
+    && station.longitud !== null;
+}
+
 function buildCandidateStations({ stations, vehicle, coordinates, totalDistanceKm }) {
   return stations
-    .filter((station) => station.disponible)
+    .filter(isUsableStation)
     .map((station) => ({
       ...station,
       compatibleConnector: encontrarConectorCompatible(vehicle.conectoresCompatibles, station.conectoresDisponibles),
@@ -95,7 +108,7 @@ function buildCandidateStations({ stations, vehicle, coordinates, totalDistanceK
 
 function buildOriginStations({ stations, vehicle, origin }) {
   return stations
-    .filter((station) => station.disponible)
+    .filter(isUsableStation)
     .map((station) => ({
       ...station,
       compatibleConnector: encontrarConectorCompatible(vehicle.conectoresCompatibles, station.conectoresDisponibles),
@@ -122,9 +135,10 @@ function formatStation(station, extra = {}) {
     longitud: station.longitud,
     distanciaAlTrazado_km: ROUND(extra.distanciaAlTrazadoKm ?? station.route?.distanceKm ?? station.distanceFromOriginKm ?? 0),
     esCargaInicial: Boolean(extra.esCargaInicial),
-    fuente: station.fuente || null,
+    // CR-01: en el catálogo local la fuente y la revisión vienen de la verificación de ubicación.
+    fuente: station.fuente || station.fuenteUbicacion || null,
     verificada: station.verificada ?? null,
-    fechaRevision: toIsoDate(station.fechaRevision),
+    fechaRevision: toIsoDate(station.fechaRevision || station.fechaVerificacionUbicacion),
     fechaActualizacion: toIsoDate(station.fechaActualizacion),
   };
 }
@@ -143,7 +157,7 @@ function calculateChargingPlan({ vehicle, stations, originStations = [], totalDi
 
   while (true) {
     const remainingKm = totalDistanceKm - progressKm;
-    if (soc - socForDistance(remainingKm) >= RESERVA_SOC_MIN) {
+    if (soc - socForDistance(remainingKm) >= RESERVA_SOC_MIN + MARGEN_DESTINO_SOC) {
       soc -= socForDistance(remainingKm);
       break;
     }
@@ -165,7 +179,7 @@ function calculateChargingPlan({ vehicle, stations, originStations = [], totalDi
 
         if (nextTarget) {
           const targetKm = nextTarget.progressKm ?? nextTarget.route?.progressKm;
-          const requiredSoc = RESERVA_SOC_MIN + socForDistance(targetKm);
+          const requiredSoc = RESERVA_SOC_MIN + socForDistance(targetKm) + (nextTarget.progressKm === totalDistanceKm ? MARGEN_DESTINO_SOC : 0);
           const socSalida = Math.max(OBJETIVO_CARGA_MAX, requiredSoc);
           if (socSalida <= 100.001) {
             const recarga = calcularRecarga(
@@ -206,7 +220,7 @@ function calculateChargingPlan({ vehicle, stations, originStations = [], totalDi
         exito: false,
         paradas: stops,
         advertencias: warnings,
-        error: 'No hay una estación compatible alcanzable sin bajar de la reserva mínima de batería.',
+        error: 'No hay una estación compatible alcanzable sin bajar de la reserva mínima de batería. Prueba con más batería inicial o con otro vehículo.',
         code: 'ROUTE_NOT_FEASIBLE',
       };
     }
@@ -230,14 +244,14 @@ function calculateChargingPlan({ vehicle, stations, originStations = [], totalDi
     }
 
     const targetKm = nextTarget.progressKm ?? nextTarget.route?.progressKm;
-    const requiredSoc = RESERVA_SOC_MIN + socForDistance(targetKm - stop.route.progressKm);
+    const requiredSoc = RESERVA_SOC_MIN + socForDistance(targetKm - stop.route.progressKm) + (targetKm === totalDistanceKm ? MARGEN_DESTINO_SOC : 0);
     const socSalida = Math.max(OBJETIVO_CARGA_MAX, requiredSoc);
     if (socSalida > 100.001) {
       return {
         exito: false,
         paradas: stops,
         advertencias: warnings,
-        error: `El siguiente tramo desde ${stop.nombre} excede la autonomía del vehículo incluso al 100%.`,
+        error: `El siguiente tramo desde ${stop.nombre} excede la autonomía del vehículo incluso al 100%. Prueba con otro vehículo.`,
         code: 'ROUTE_NOT_FEASIBLE',
       };
     }
@@ -339,7 +353,7 @@ function createRoutePlanningService({
     };
   }
 
-  async function plan({ origin, destination, origen, destino, origenId, destinoId, vehiculoId, socInicial }) {
+  async function plan({ origin, destination, origen, destino, origenId, destinoId, vehiculoId, socInicial, usuarioId = null }) {
     const inputErrors = [];
     const originValue = origin || origen || origenId;
     const destinationValue = destination || destino || destinoId;
@@ -349,7 +363,8 @@ function createRoutePlanningService({
     if (!Number.isFinite(socInicial) || socInicial < 0 || socInicial > 100) inputErrors.push('El campo "socInicial" debe ser un número entre 0 y 100.');
     if (inputErrors.length) return { exito: false, code: 'VALIDATION_ERROR', error: inputErrors.join(' ') };
 
-    const vehicle = vehicles.find((item) => item.id === vehiculoId);
+    // RF31: un vehículo propio solo lo puede usar su dueño.
+    const vehicle = vehicles.find((item) => item.id === vehiculoId && (!item.esPersonalizado || (usuarioId && item.userId === usuarioId)));
     if (!vehicle) return { exito: false, code: 'VEHICLE_NOT_FOUND', error: `Vehículo con ID '${vehiculoId}' no encontrado.` };
 
     const geocode = (query) => withRetry(() => providers.geocode(query), { label: 'geocode' });

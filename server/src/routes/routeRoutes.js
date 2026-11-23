@@ -12,7 +12,8 @@ function createRouteRoutes({ routePlanner, catalogController, cityController, lo
   router.post('/calcular-ruta', crearCalcularRuta(logger));
 
   // Endpoint v2: Nominatim + OpenRouteService desde el backend.
-  router.post('/routes/plan', crearPlanRoute(routePlanner, logger));
+  // optionalAuth permite usar los vehículos propios del usuario autenticado (RF31).
+  router.post('/routes/plan', optionalAuth, crearPlanRoute(routePlanner, logger));
 
   // Catálogo público con filtros (marca, conector, ciudad, operador, potencia).
   router.get('/vehiculos', optionalAuth, catalogController.listVehicles);

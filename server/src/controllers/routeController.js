@@ -206,7 +206,8 @@ function crearPlanRoute(routePlanner = createRoutePlanningService(), logger = nu
   return async function planRoute(req, res) {
     try {
       const planner = resolvePlanner();
-      const result = await planner.plan(req.body || {});
+      // RF31: el dueño del vehículo propio se toma de la sesión, nunca del cuerpo de la solicitud.
+      const result = await planner.plan({ ...(req.body || {}), usuarioId: req.user?.id ?? null });
       const status = result.code === 'VALIDATION_ERROR' ? 400
         : result.code === 'VEHICLE_NOT_FOUND' ? 404
           : 200;

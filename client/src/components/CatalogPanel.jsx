@@ -7,7 +7,7 @@ import { checkDataFreshness } from '../utils/stationFreshness';
 import { Search, Car, Zap, Star, Filter, ShieldCheck, MapPin, ExternalLink, Plus, AlertTriangle } from 'lucide-react';
 
 const CONECTORES = ['', 'CCS2', 'CHAdeMO'];
-const FILTROS_INICIALES = { texto: '', conector: '', potenciaMin: '' };
+const FILTROS_INICIALES = { texto: '', conector: '', potenciaMin: '', bateriaMin: '' };
 
 const ETIQUETAS_ESTADO = {
   DISPONIBLE: 'disponibles',
@@ -71,7 +71,7 @@ export default function CatalogPanel({ onRequireAuth }) {
       setError('');
       try {
         const query = tipo === 'vehiculos'
-          ? { marca: filtros.texto, conector: filtros.conector, potenciaMin: filtros.potenciaMin }
+          ? { marca: filtros.texto, conector: filtros.conector, potenciaMin: filtros.potenciaMin, bateriaMin: filtros.bateriaMin }
           : { busqueda: filtros.texto, conector: filtros.conector, potenciaMin: filtros.potenciaMin, vehiculoId };
         if (tipo === 'vehiculos') {
           const data = await api.fetchVehiculos(query);
@@ -207,6 +207,15 @@ export default function CatalogPanel({ onRequireAuth }) {
             <option value="100">100+ kW (Ultra-rápida)</option>
             <option value="150">150+ kW (High Power)</option>
           </select>
+          {tipo === 'vehiculos' && (
+            // RF21: filtro por capacidad de batería utilizable.
+            <select className="form-select" value={filtros.bateriaMin} onChange={(event) => actualizarFiltro('bateriaMin', event.target.value)} aria-label="Batería mínima">
+              <option value="">Batería mínima</option>
+              <option value="50">50+ kWh</option>
+              <option value="60">60+ kWh</option>
+              <option value="70">70+ kWh</option>
+            </select>
+          )}
           {tipo === 'estaciones' && (
             <select className="form-select" value={vehiculoId} onChange={(event) => setVehiculoId(event.target.value)} aria-label="Vehículo para comprobar compatibilidad">
               <option value="">Comprobar compatibilidad con vehículo…</option>
