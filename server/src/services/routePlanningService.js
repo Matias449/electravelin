@@ -14,6 +14,9 @@ const STATIONS_CACHE_MAX_ENTRIES = 50;
 
 const ROUTE_CORRIDOR_KM = 35;
 const ORIGIN_STATION_RADIUS_KM = 8;
+// RN02: el destino debe alcanzarse con batería estrictamente superior a la reserva.
+const MARGEN_DESTINO_SOC = 1;
+
 const ROUND = (value, decimals = 2) => Math.round(value * (10 ** decimals)) / (10 ** decimals);
 
 const withRetry = async (fn, { retries = 2, baseDelayMs = 300, label = 'routing' } = {}) => {
@@ -143,7 +146,7 @@ function calculateChargingPlan({ vehicle, stations, originStations = [], totalDi
 
   while (true) {
     const remainingKm = totalDistanceKm - progressKm;
-    if (soc - socForDistance(remainingKm) >= RESERVA_SOC_MIN) {
+    if (soc - socForDistance(remainingKm) >= RESERVA_SOC_MIN + MARGEN_DESTINO_SOC) {
       soc -= socForDistance(remainingKm);
       break;
     }
@@ -165,7 +168,7 @@ function calculateChargingPlan({ vehicle, stations, originStations = [], totalDi
 
         if (nextTarget) {
           const targetKm = nextTarget.progressKm ?? nextTarget.route?.progressKm;
-          const requiredSoc = RESERVA_SOC_MIN + socForDistance(targetKm);
+          const requiredSoc = RESERVA_SOC_MIN + socForDistance(targetKm) + (nextTarget.progressKm === totalDistanceKm ? MARGEN_DESTINO_SOC : 0);
           const socSalida = Math.max(OBJETIVO_CARGA_MAX, requiredSoc);
           if (socSalida <= 100.001) {
             const recarga = calcularRecarga(
@@ -230,7 +233,7 @@ function calculateChargingPlan({ vehicle, stations, originStations = [], totalDi
     }
 
     const targetKm = nextTarget.progressKm ?? nextTarget.route?.progressKm;
-    const requiredSoc = RESERVA_SOC_MIN + socForDistance(targetKm - stop.route.progressKm);
+    const requiredSoc = RESERVA_SOC_MIN + socForDistance(targetKm - stop.route.progressKm) + (targetKm === totalDistanceKm ? MARGEN_DESTINO_SOC : 0);
     const socSalida = Math.max(OBJETIVO_CARGA_MAX, requiredSoc);
     if (socSalida > 100.001) {
       return {
