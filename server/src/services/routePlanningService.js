@@ -220,7 +220,7 @@ function calculateChargingPlan({ vehicle, stations, originStations = [], totalDi
         exito: false,
         paradas: stops,
         advertencias: warnings,
-        error: 'No hay una estación compatible alcanzable sin bajar de la reserva mínima de batería.',
+        error: 'No hay una estación compatible alcanzable sin bajar de la reserva mínima de batería. Prueba con más batería inicial o con otro vehículo.',
         code: 'ROUTE_NOT_FEASIBLE',
       };
     }
@@ -251,7 +251,7 @@ function calculateChargingPlan({ vehicle, stations, originStations = [], totalDi
         exito: false,
         paradas: stops,
         advertencias: warnings,
-        error: `El siguiente tramo desde ${stop.nombre} excede la autonomía del vehículo incluso al 100%.`,
+        error: `El siguiente tramo desde ${stop.nombre} excede la autonomía del vehículo incluso al 100%. Prueba con otro vehículo.`,
         code: 'ROUTE_NOT_FEASIBLE',
       };
     }
