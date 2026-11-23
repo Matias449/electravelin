@@ -155,7 +155,10 @@ function createApp({ routePlanner, store, jwtSecret, logger, rateLimits, station
   app.use((req, res) => res.status(404).json({ exito: false, code: 'NOT_FOUND', error: 'Ruta no encontrada' }));
 
   app.use((err, req, res, next) => {
-    if (err.type === 'entity.parse.failed') {
+    // En Vercel el cuerpo lo interpreta la plataforma y un JSON roto llega como error 400 propio (RNF05).
+    const jsonInvalido = err.type === 'entity.parse.failed'
+      || ((err.status === 400 || err.statusCode === 400) && /json/i.test(err.message || ''));
+    if (jsonInvalido) {
       return res.status(400).json({ exito: false, code: 'INVALID_JSON', error: 'El cuerpo de la solicitud no es JSON válido.' });
     }
     if (err.type === 'entity.too.large') {
